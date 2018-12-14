@@ -1,0 +1,12 @@
+import os
+import json
+
+load_dict = {}
+with open("../../Desktop/addressDir.json", 'r') as load_f:
+    load_dict = json.load(load_f)
+for province_dict in load_dict:
+    if province_dict["child"]:
+        province_dict["child"] = []
+
+with open("../../Desktop/addressDir1.json", "w") as f:
+    json.dump(load_dict, f, ensure_ascii=False)
