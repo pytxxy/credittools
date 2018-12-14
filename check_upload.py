@@ -104,7 +104,7 @@ class ProcessManager:
 
         if self.error_list:
             print('failed to upload files:')
-            for item in self.right_list:
+            for item in self.error_list:
                 print(item)
 
     def process_func(self, src_file):
@@ -118,7 +118,7 @@ class ProcessManager:
             if file_size == length and local_crc64 == oss_crc64:
                 print('file_size {} and crc64 {}'.format(file_size, local_crc64))
                 self.right_list.append(src_file)
-                print('success upload {}.'.format(src_file))
+                print('success uploaded {}.'.format(src_file))
             else:
                 self.error_list.append(src_file)
                 print('failed to upload {}!'.format(src_file))
