@@ -87,8 +87,8 @@ def get_middle_name(src_name, suffix=None):
 
 
 def get_middle_path(src_path, suffix=None):
-    filepath, filename = os.path.split(src_path)
-    return os.path.join(filepath, get_middle_name(filename, suffix))
+    file_path, filename = os.path.split(src_path)
+    return os.path.join(file_path, get_middle_name(filename, suffix))
 
 
 # 对输入参数进行解析，设置相应参数
