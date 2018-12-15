@@ -1,102 +1,95 @@
 # -*- coding:UTF-8 -*-
 
-'''
+"""
 Created on 2015年11月19日
 
 @author: caifh
-'''
-import zipfile
+"""
+
 import argparse
 import os
-import tempfile
+import subprocess
 
-import creditutils.file_util as myfile
-import creditutils.apk_util as apk
-import xmltodict
+import creditutils.file_util as file_util
 
-def update_channel(src_apk_path, channel):
-    if os.path.exists(src_apk_path):
-        zipped = zipfile.ZipFile(src_apk_path, 'a', zipfile.ZIP_DEFLATED) 
-        empty_channel_file = "META-INF/pychannel_{channel}".format(channel=channel)
-        my_temp_file = tempfile.gettempdir() + os.sep + "channel"
-        fd = open(my_temp_file, "w")
-        fd.close()
-        zipped.write(my_temp_file, empty_channel_file)
-        zipped.close()
+
+def update_channel(src_file, dst_file, channel):
+    _CMD_FORMAT = 'walle.bat put -c {} {} {}'
+    if os.path.isfile(src_file):
+        if os.path.isfile(dst_file):
+            os.remove(dst_file)
+
+        to_run_cmd = _CMD_FORMAT.format(channel, src_file, dst_file)
+        subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
     else:
-        info = '{} not exists'.format(src_apk_path)
-        print(info)
+        info = f'{src_file} not exists!'
+        raise Exception(info)
 
-def update_upgrade(src_apk_path, upgrade):
-    if os.path.exists(src_apk_path):
-        zipped = zipfile.ZipFile(src_apk_path, 'a', zipfile.ZIP_DEFLATED) 
-        empty_upgrade_file = "META-INF/pyupgrade_{upgrade}".format(upgrade=upgrade)
-        my_temp_file = tempfile.gettempdir() + os.sep + "upgrade"
-        fd = open(my_temp_file, "w")
-        fd.close()
-        zipped.write(my_temp_file, empty_upgrade_file)
-        zipped.close()
-    else:
-        info = '{} not exists'.format(src_apk_path)
-        print(info)
 
-def batch_update_channel(src_apk_path, dst_apk_dir, config_file, target_name=None):
-    if os.path.exists(src_apk_path):
-        apk_items = apk.get_apk_info(src_apk_path)
-        if os.path.exists(config_file):
+def batch_update_channel(src_path, dst_dir, config_file):
+    if os.path.isfile(src_path):
+        # apk_items = apk_util.get_apk_info(src_path)
+        if os.path.isfile(config_file):
+            # 先进行批量处理
+            _CMD_FORMAT = 'walle.bat batch -f {} {} {}'
+            to_run_cmd = _CMD_FORMAT.format(config_file, src_path, dst_dir)
+            subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
+
+            # 读取全部渠道信息
             parser = ConfigParser(config_file)
             parser.parse()
-            channel_config = parser.get_config()
-#             pprint.pprint(channel_config)
-#             if not target_name:
-#                 target_name = os.path.basename(src_apk_path)
-                 
-            for item in channel_config:
-                if not target_name:
-                    name_parts = []
-                    name_parts.append(apk_items['label'])
-                    name_parts.append(apk_items['versionCode'])
-                    name_parts.append(item[ConfigParser.NAME_FLAG])
-                    item_target_name = '_'.join(name_parts) + '.apk'
-                    
-                    # 公众监督打包专用配置
-#                     name_parts.append('gzjd')
-#                     name_parts.append(apk_items['versionCode'])
-#                     name_parts.append(item[ConfigParser.VALUE_FLAG])
-#                     item_target_name = '_'.join(name_parts) + '.apk'
-                else:
-                    item_target_name = target_name
-                    
-#                 dst_apk_path = dst_apk_dir + os.sep + item[ConfigParser.NAME_FLAG] + os.sep + item_target_name
-                # 输出名称直接使用渠道名称
-                dst_apk_path = dst_apk_dir + os.sep + item[ConfigParser.VALUE_FLAG] + '.apk'
-                myfile.replace_file(src_apk_path, dst_apk_path)
-                update_channel(dst_apk_path, item[ConfigParser.VALUE_FLAG])
-        else:
-            info = '{} not exists'.format(config_file)
-            print(info)
-    else:
-        info = '{} not exists'.format(src_apk_path)
-        print(info)
+            channels = parser.get_config()
 
-'''负责整体性输入的解析'''
+            # 进行重命名操作
+            src_name = os.path.basename(src_path)
+            for item in channels:
+                src_item_path = os.path.join(dst_dir, get_middle_name(src_name, '_' + item))
+                # 输出名称直接使用渠道名称
+                dst_item_path = os.path.join(dst_dir, item + '.apk')
+                if os.path.isfile(dst_item_path):
+                    os.remove(dst_item_path)
+
+                os.rename(src_item_path, dst_item_path)
+        else:
+            info = f'{config_file} not exists!'
+            raise Exception(info)
+    else:
+        info = f'{src_path} not exists!'
+        raise Exception(info)
+
+
+# 负责渠道列表的解析
 class ConfigParser:
-    CHANNEL_FLAG = 'channel'
-    ITEM_FLAG = 'item'
-    NAME_FLAG = 'name'
-    VALUE_FLAG = 'value'
-    UPGRADE_FLAG = 'upgrade'
+    COMMENT_FLAG = '#'
 
     def __init__(self, config_path):
         self.config_path = config_path
-        
+        self._data = list()
+
     def parse(self):
-        doc = xmltodict.parse(myfile.read_file_content(self.config_path))
-#         self._data = doc[ConfigParser.CHANNEL_FLAG]
-        self._data = doc[ConfigParser.CHANNEL_FLAG][ConfigParser.ITEM_FLAG]
-        
+        data_list = file_util.read_file_lines(self.config_path)
+        for item in data_list:
+            if item:
+                value = item.strip()
+                if value and not value.startswith(ConfigParser.COMMENT_FLAG):
+                    self._data.append(value)
+
     def get_config(self):
         return self._data
+
+
+def get_middle_name(src_name, suffix=None):
+    if not suffix:
+        suffix = '_middle4temp'
+
+    filename, extension = os.path.splitext(src_name)
+    return filename + suffix + extension
+
+
+def get_middle_path(src_path, suffix=None):
+    filepath, filename = os.path.split(src_path)
+    return os.path.join(filepath, get_middle_name(filename, suffix))
+
 
 # 对输入参数进行解析，设置相应参数
 def get_args(src_args=None):
@@ -104,12 +97,13 @@ def get_args(src_args=None):
     parser.add_argument('src', metavar='src', help='the source file to be updated channel info')
     parser.add_argument('dst', metavar='dst', help='the destine file to write')
     parser.add_argument('channel', metavar='channel', help='channel info')
-    parser.add_argument('-b', dest='is_batch', action='store_true', default=False, help='indicate the channel value is a channel configure file')
-    parser.add_argument('-n', dest='name', default=None, help='indicate the target apk name')
-    
-#     parser.print_help()
+    parser.add_argument('-b', dest='is_batch', action='store_true', default=False,
+                        help='indicate the channel value is a channel configure file')
 
-    return parser.parse_args(src_args)    
+    #     parser.print_help()
+
+    return parser.parse_args(src_args)
+
 
 def main(args):
     src = os.path.abspath(args.src)
@@ -117,21 +111,21 @@ def main(args):
     if os.path.exists(src):
         if not args.is_batch:
             channel = args.channel
-            if not os.path.exists(os.path.abspath(channel)):
-                myfile.replace_file(src, dst)
-                update_channel(dst, channel)
+            if not os.path.isfile(channel):
+                update_channel(src, dst, channel)
             else:
-                info = '{} is a configure file!'.format(channel)
-                print(info)
+                info = f'{channel} is a configure file, not a channel flag!'
+                raise Exception(info)
         else:
             config_file = args.channel
-            batch_update_channel(src, dst, config_file, args.name)
+            batch_update_channel(src, dst, config_file)
     else:
-        info = '{} not exists'.format(src)
-        print(info)
-        
+        info = f'{src} not exists!'
+        raise Exception(info)
+
+
 if __name__ == '__main__':
-    args = get_args()
-    main(args)
-    
+    in_args = get_args()
+    main(in_args)
+
     print('to the end')

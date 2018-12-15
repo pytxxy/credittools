@@ -321,7 +321,7 @@ def protect(ip, user_name, key, secret, file_path, dst_path=None):
         dst_path_info = ''
 
     src_args = '-i {} -u {} -k {} -s {} {}{}'.format(ip, user_name, key, secret, dst_path_info, file_path)
-    print('args: {}'.format(src_args))
+    print(f'src_args: {src_args}')
     args = get_args(src_args.split())
     return main(args)
 
@@ -329,5 +329,5 @@ def protect(ip, user_name, key, secret, file_path, dst_path=None):
 if __name__ == '__main__':
     test_args = '-i 10.192.76.12 -u pyzx -k c2a6ca06-0989-4ff5-82cd-10494fcc53eb -s 52a3724f-f45f-429a-932f-229bad482f54 D:\\auto_build\\pytxxy\\output\\pre\\20180816_161136\\3.4.8beta_p_456-1-20180816.apk'.split()
     # test_args = None
-    src_args = get_args(test_args)
-    util.measure_time(main, src_args)
+    in_args = get_args(test_args)
+    util.measure_time(main, in_args)
