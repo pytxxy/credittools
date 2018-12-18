@@ -6,9 +6,10 @@ import pprint
 import time
 
 import creditutils.apk_builder_util as apk_builder
-import creditutils.build_base_android as build_base
-import creditutils.file_util as myfile
-import creditutils.str_util as str_utils
+import build_base_android as build_base
+import creditutils.file_util as file_util
+import creditutils.str_util as str_util
+import creditutils.trivial_util as trivial_util
 
 
 # 对整个工程内相关文件进行替换操作
@@ -23,7 +24,7 @@ class ProjectBuilder(build_base.ProjectBuilder):
         self.gradle_path = os.path.normpath(self.gradle_path)
 
         self.manifest_path = self.prj_path + os.sep + 'src/main/AndroidManifest.xml'
-        self.manifest_path = myfile.normalpath(self.manifest_path)
+        self.manifest_path = file_util.normalpath(self.manifest_path)
 
     # 更新通用信息
     def update_info(self):
@@ -63,7 +64,7 @@ class BuildManager(build_base.BuildManager):
 
         output_directory = self.work_path + os.sep + self.ori_build_config[build_base.BuildConfigParser.WORKSPACE_FLAG][
             build_base.BuildConfigParser.TARGET_PATH_FLAG]
-        output_directory = myfile.normalpath(output_directory)
+        output_directory = file_util.normalpath(output_directory)
         output_directory = output_directory + os.sep + self.ver_env + os.sep + time_str
         params[build_base.ProjectBuilder.OUTPUT_DIRECTORY_FLAG] = output_directory
 
@@ -77,7 +78,7 @@ class BuildManager(build_base.BuildManager):
         params[ProjectBuilder.PROTECT_FLAG] = self.ori_build_config[build_base.BuildConfigParser.PROTECT_FLAG]
         is_need_infos = params[ProjectBuilder.PROTECT_FLAG][ProjectBuilder.IS_NEED_FLAG]
         for k in is_need_infos:
-            is_need_infos[k] = str_utils.get_bool(is_need_infos[k])
+            is_need_infos[k] = str_util.get_bool(is_need_infos[k])
         params[ProjectBuilder.SIGNER_FLAG] = self.ori_build_config[build_base.BuildConfigParser.SIGNER_FLAG]
 
         # 指定输出归档文件地址
@@ -153,6 +154,9 @@ def get_args(src_args=None):
     parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, choices=['dev', 'test', 'pre', 'pro'],
                         help='dev: develop environment; test: test environment; pre: pre-release environment; pro: production environment;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='branch name')
+
+    parser.add_argument('--align', dest='to_align', action='store_true', default=True,
+                        help='indicate to align apk file after protected')
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
                         help='indicate to upload build files')
 
@@ -167,15 +171,8 @@ def get_args(src_args=None):
 
 
 if __name__ == '__main__':
-    begin = time.time()
-
     #     test_args = '-b -s huawei D:/version_build/pytxxy/config/dynamic/update_config.xml'.split()
     test_args = None
-    args = get_args(test_args)
-    main(args)
+    in_args = get_args(test_args)
+    trivial_util.measure_time(main, in_args)
 
-    end = time.time()
-    time_info = str_utils.get_time_info(begin, end)
-
-    # 输出总用时
-    print('===Finished. Total time: {}==='.format(time_info))

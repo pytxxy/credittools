@@ -3,7 +3,7 @@ import os
 import time
 import argparse
 import creditutils.file_util as myfile
-import creditutils.build_base_ios as build_base
+import build_base_ios as build_base
 import creditutils.str_util as str_utils
     
 
