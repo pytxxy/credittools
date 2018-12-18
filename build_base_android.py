@@ -21,6 +21,60 @@ import ftp_upload
 import creditutils.zip_util as zip_util
 
 
+class BuildCmd:
+    pre_cmd = 'gradlew.bat --configure-on-demand clean'
+
+    map_key = ['build_type', 'for_publish']
+    cmd_name_format = 'gradlew.bat --configure-on-demand assemble{build_type} -PFOR_PUBLISH={for_publish}'
+
+    def __init__(self):
+        # 先初始化默认值
+        self.build_type = 'Release'
+        self.for_publish = str(True).lower()
+
+    def update_value(self, info):
+        self.build_type = info[ProjectBuilder.TYPE_FLAG].capitalize()
+
+    def get_map(self):
+        rtn_map = {}
+        for item in BuildCmd.map_key:
+            rtn_map[item] = getattr(self, item)
+
+        return rtn_map
+
+    def get_build_cmd(self, info):
+        self.update_value(info)
+        params = self.get_map()
+        cmd_str = BuildCmd.cmd_name_format.format(**params)
+        # print(cmd_str)
+
+        return cmd_str
+
+
+# 到指定目录执行gradle命令生成指定版本apk
+def make_apk_with_gradle(work_path, cmd_str, pre_cmd=BuildCmd.pre_cmd):
+    dir_change = False
+    pre_cwd = os.getcwd()
+    if os.path.abspath(pre_cwd) != os.path.abspath(work_path):
+        os.chdir(os.path.dirname(work_path))
+        dir_change = True
+    try:
+        if pre_cmd:
+            pre_build_cmd = os.path.join(os.path.dirname(work_path), pre_cmd)
+            print(pre_build_cmd)
+            subprocess.check_call(pre_build_cmd, shell=True)
+
+        build_cmd = os.path.join(os.path.dirname(work_path), cmd_str)
+        print(build_cmd)
+        subprocess.check_call(build_cmd, shell=True)
+        # os.system(build_cmd)
+    except subprocess.CalledProcessError:
+        raise
+    finally:
+        if dir_change:
+            os.chdir(pre_cwd)
+
+
 # 对整个工程内相关文件进行替换操作
 class ProjectBuilder:
     PRJ_ROOT_FLAG = 'prj_root'
@@ -181,6 +235,10 @@ class ProjectBuilder:
         else:
             print('{} remain as {}.'.format(coverage_label, value))
 
+    def get_build_cmd(self):
+        build_cmd = BuildCmd()
+        return build_cmd.get_build_cmd(self.info)
+
     def build(self, chan_id, mode=apk_builder.RELEASE_MODE):
         self._update_chan_info(chan_id)
 
@@ -200,10 +258,9 @@ class ProjectBuilder:
         if os.path.exists(apk_path) and os.path.isfile(apk_path):
             os.remove(apk_path)
 
-        apk_builder.make_apk(self.prj_path, mode)
+        cmd_str = self.get_build_cmd()
+        make_apk_with_gradle(self.prj_path, cmd_str)
 
-        #         mode_flag = apk_builder.MODE_MAP[mode]
-        #         src_file = self.prj_path + os.sep + 'bin' + os.sep + apk_name + '-' + mode_flag + '.apk'
         src_file = apk_path
 
         if os.path.exists(src_file):
@@ -232,11 +289,11 @@ class ProjectBuilder:
                 dst_class_relative_path = self.info[ProjectBuilder.BUILD_CLASS_FLAG][ProjectBuilder.DST_PATH_FLAG]
                 dst_class_zip_path = self.info[ProjectBuilder.OUTPUT_DIRECTORY_FLAG] + os.sep + 'classes.zip'
 
-                #                 dst_class_path = self.info[ProjectBuilder.OUTPUT_DIRECTORY_FLAG] + os.sep + dst_class_relative_path
-                #                 dst_class_path = file_util.normalize_path(dst_class_path)
-
-                #                 if os.path.isdir(dst_class_path):
-                #                     shutil.rmtree(dst_class_path)
+                # dst_class_path = self.info[ProjectBuilder.OUTPUT_DIRECTORY_FLAG] + os.sep + dst_class_relative_path
+                # dst_class_path = file_util.normalize_path(dst_class_path)
+                #
+                # if os.path.isdir(dst_class_path):
+                #     shutil.rmtree(dst_class_path)
 
                 if os.path.isdir(src_class_path):
                     #                     shutil.copytree(src_class_path, dst_class_path)
