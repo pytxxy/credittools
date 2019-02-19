@@ -88,9 +88,9 @@ class ProcessManager:
                     self.process_modify_func(self.src, self.identification, self.old_key, self.tag_only)
             elif os.path.isdir(self.src):
                 if self.dst:
-                    myfile.process_dir_src_to_dst(self.src, self.dst, self.process_common_func, self.identification, self.to_copy, self.tag_only)
+                    myfile.process_dir_src_to_dst(self.src, self.dst, self.process_common_func, self.identification, self.old_key, self.to_copy, self.tag_only)
                 else:
-                    myfile.process_dir(self.src, self.process_modify_func, self.tag_only)
+                    myfile.process_dir(self.src, self.process_modify_func, self.identification, self.old_key, self.tag_only)
             else:
                 raise Exception('{} not exists'.format(self.src))
         finally:
