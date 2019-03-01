@@ -99,7 +99,7 @@ class ProcessManager:
                     shutil.rmtree(self.temp_dir)
 
     # to_copy 标识是否直接拷贝不相干或者已经压缩过文件, tag_only 标识是否只是纯粹加压缩标签
-    def process_common_func(self, src_file, dst_file, commpressed_identify, old_commpressed_identify,
+    def process_common_func(self, src_file, dst_file, compressed_identify, old_compressed_identify,
                             to_copy=False, tag_only=False):
         ext_name = os.path.splitext(src_file.lower())[1]
         filename = os.path.split(src_file)[1]
@@ -121,7 +121,7 @@ class ProcessManager:
             return
 
         # 判断是否已经压缩过
-        is_compressed = ProcessManager.check_if_compressed(src_file, commpressed_identify, old_commpressed_identify)
+        is_compressed = ProcessManager.check_if_compressed(src_file, compressed_identify, old_compressed_identify)
         if is_compressed:
             if to_copy:
                 # 已经压缩过则复制到目标文件夹
@@ -140,13 +140,13 @@ class ProcessManager:
 
             if os.path.isfile(dst_file):
                 # 为目标文件增加压缩标识
-                ProcessManager.add_compressed_flag(dst_file, commpressed_identify)
+                ProcessManager.add_compressed_flag(dst_file, compressed_identify)
                 print('add compressed flag to "{}" success.'.format(dst_file))
             else:
                 print('process "{}" to "{}" failed!'.format(src_file, dst_file))
 
     # tag_only 标识是否只是纯粹加压缩标签
-    def process_modify_func(self, src_file, commpressed_identify, old_commpressed_identify, tag_only=False):
+    def process_modify_func(self, src_file, compressed_identify, old_compressed_identify, tag_only=False):
         ext_name = os.path.splitext(src_file.lower())[1]
         filename = os.path.split(src_file)[1]
         # 非指定后缀名的文件无须处理
@@ -158,7 +158,7 @@ class ProcessManager:
             return
 
         # 已经压缩过的无须处理
-        is_compressed = ProcessManager.check_if_compressed(src_file, commpressed_identify, old_commpressed_identify)
+        is_compressed = ProcessManager.check_if_compressed(src_file, compressed_identify, old_compressed_identify)
         if is_compressed:
             return
         else:
@@ -172,74 +172,74 @@ class ProcessManager:
                 print('smart compress "{}" success.'.format(src_file))
 
             # 为目标文件增加压缩标识
-            ProcessManager.add_compressed_flag(src_file, commpressed_identify)
+            ProcessManager.add_compressed_flag(src_file, compressed_identify)
             print('add compressed flag to "{}" success.'.format(src_file))
 
     # 给png 图片文件增加压缩标识
     @staticmethod
-    def add_compressed_flag_to_png_file(file_path, commpressed_identify):
-        png_util.insert_text_chunk(file_path, commpressed_identify,
+    def add_compressed_flag_to_png_file(file_path, compressed_identify):
+        png_util.insert_text_chunk(file_path, compressed_identify,
                                    ProcessManager.COMPRESSED_FLAG_CHUNK_INDEX)
 
     # 给jpeg 图片文件增加压缩标识
     @staticmethod
-    def add_compressed_flag_to_jpeg_file(file_path, commpressed_identify):
+    def add_compressed_flag_to_jpeg_file(file_path, compressed_identify):
         exif_dict = piexif.load(file_path)
         comment_tag = piexif.ExifIFD.UserComment
         exif_info = exif_dict['Exif']
-        exif_info[comment_tag] = commpressed_identify.encode()
+        exif_info[comment_tag] = compressed_identify.encode()
         piexif.insert(piexif.dump(exif_dict), file_path)
 
     # 给图片文件增加压缩标识
     @staticmethod
-    def add_compressed_flag(src_path, commpressed_identify):
+    def add_compressed_flag(src_path, compressed_identify):
         img_type = imghdr.what(src_path)
         if ImageType.jpeg == img_type:
-            ProcessManager.add_compressed_flag_to_jpeg_file(src_path, commpressed_identify)
+            ProcessManager.add_compressed_flag_to_jpeg_file(src_path, compressed_identify)
         elif ImageType.png == img_type:
-            ProcessManager.add_compressed_flag_to_png_file(src_path, commpressed_identify)
+            ProcessManager.add_compressed_flag_to_png_file(src_path, compressed_identify)
 
     # 检测png 文件是否包含压缩标识
     @staticmethod
-    def check_if_png_compressed(file_path, commpressed_identify, old_commpressed_identify):
+    def check_if_png_compressed(file_path, compressed_identify, old_compressed_identify):
         data = png_util.get_text_chunk_data(file_path, 1)
         if data:
-            if data == commpressed_identify:
+            if data == compressed_identify:
                 return True
 
             # 检查是否有旧的标识，替换成新的标识
-            if data == old_commpressed_identify:
-                ProcessManager.add_compressed_flag(file_path, commpressed_identify)
+            if data == old_compressed_identify:
+                ProcessManager.add_compressed_flag(file_path, compressed_identify)
                 return True
         else:
             return False
 
     # 检测jpeg 文件是否包含压缩标识
     @staticmethod
-    def check_if_jpeg_compressed(file_path, commpressed_identify, old_commpressed_identify):
+    def check_if_jpeg_compressed(file_path, compressed_identify, old_compressed_identify):
         exif_dict = piexif.load(file_path)
         comment_tag = piexif.ExifIFD.UserComment
         exif_info = exif_dict['Exif']
         if exif_info:
             if comment_tag in exif_info:
-                if exif_info[comment_tag] == commpressed_identify.encode():
+                if exif_info[comment_tag] == compressed_identify.encode():
                     return True
 
                 # 检查是否有旧的标识，替换成新的标识
-                if exif_info[comment_tag] == old_commpressed_identify:
-                    ProcessManager.add_compressed_flag(file_path, commpressed_identify)
+                if exif_info[comment_tag] == old_compressed_identify:
+                    ProcessManager.add_compressed_flag(file_path, compressed_identify)
                     return True
 
         return False
 
     # 检查文件是否含有压缩标识
     @staticmethod
-    def check_if_compressed(file_path, commpressed_identify, old_commpressed_identify):
+    def check_if_compressed(file_path, compressed_identify, old_compressed_identify):
         img_type = imghdr.what(file_path)
         if ImageType.png == img_type:
-            return ProcessManager.check_if_png_compressed(file_path, commpressed_identify, old_commpressed_identify)
+            return ProcessManager.check_if_png_compressed(file_path, compressed_identify, old_compressed_identify)
         elif ImageType.jpeg == img_type:
-            return ProcessManager.check_if_jpeg_compressed(file_path, commpressed_identify, old_commpressed_identify)
+            return ProcessManager.check_if_jpeg_compressed(file_path, compressed_identify, old_compressed_identify)
 
         return False
 
