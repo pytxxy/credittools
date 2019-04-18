@@ -14,17 +14,23 @@ Created on 2019年4月15日
 4.可以使用“twine upload --repository-url https://test.pypi.org/legacy/ dist/bc_dock_util-0.0.9*”先上传到测试环境进行验证(也可以使用“twine upload --repository-url https://test.pypi.org/legacy/ dist/*”对所有打包文件执行上传操作)；
 5.上传正式环境使用命令为“twine upload --repository-url https://upload.pypi.org/legacy/ dist/bc_dock_util-0.0.9*”（可以简化为“twine upload dist/bc_dock_util-0.0.9*”）；
 6.上传成功，也需要同步更新github相应配置里的版本号，该方式可选；
+
+特别说明：
+1.当前该脚本可在windows7环境下面可用，且需确保默认python可执行程序是python3版本；
 """
 
 import argparse
 import os
 import re
+import subprocess
+import time
+import pexpect
 import creditutils.trivial_util as utility
 import creditutils.file_util as file_util
 import creditutils.git_util as git_util
+import creditutils.exec_cmd as exec_cmd
 
 class Manager:
-    
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
         for name, value in vars(args).items():
@@ -33,6 +39,13 @@ class Manager:
         self.src = os.path.abspath(self.src)
         self.git_root = self.src
         self.module_name = None
+        self.target_url_formal = 'https://upload.pypi.org/legacy/'
+        self.target_url_test = 'https://test.pypi.org/legacy/'
+
+        setup_name = 'setup.py'
+        self.setup_path = os.path.join(self.git_root, setup_name)
+
+        self.init_path = None
         
     def process(self):
         if self.to_update:
@@ -41,32 +54,35 @@ class Manager:
             git_util.update(self.git_root, None, self.branch)
 
         # 先校验设置的版本格式是否正确
-        if not self.is_valid_version(self.ver_no):
-            raise Exception('the verion {} is invalid!'.format(self.ver_no))
+        if not self.is_valid_version(self.ver_name):
+            raise Exception(f'the verion {self.ver_name} is invalid!')
 
-        self.update_module_name(self.ver_no)
+        is_updated = self.update_module_version(self.ver_name)
+        self.build_wheel()
+        self.upload_to_pypi()
+
+        if is_updated and self.to_commit:
+            self.commit_to_repo()
 
     def is_valid_version(self, version):
-        ver_re = '\d+(?:\.\d+){2}'
-        result = re.match(ver_re, version)
+        re_ptn = '\d+(?:\.\d+){2}'
+        result = re.match(re_ptn, version)
         if result:
             return True
         else:
             return False
 
-    def update_module_name(self, version):
-        setup_name = 'setup.py'
-        setup_path = os.path.join(self.git_root, setup_name)
-        setup_content = file_util.read_file_content(setup_path)
+    def update_module_version(self, version):
+        setup_content = file_util.read_file_content(self.setup_path)
         self.module_name = self._get_module_name(setup_content)
         if not self.module_name:
-            raise Exception('to ge module name failed!')
+            raise Exception('to get module name failed!')
 
-        self.update_setup_version(setup_path, version)
+        self.update_setup_version(self.setup_path, version)
         
         init_name = '__init__.py'
-        init_path = os.path.join(self.git_root, self.module_name, init_name)
-        self.update_init_version(init_path, version)
+        self.init_path = os.path.join(self.git_root, self.module_name, init_name)
+        return self.update_init_version(self.init_path, version)
 
     def _get_module_name(self, data):
         # example: name='creditutils'
@@ -84,17 +100,100 @@ class Manager:
         new_data = re.sub(re_ptn, '\g<1>{}\g<3>'.format(version), src_data)
         if new_data != src_data:
             file_util.write_to_file(file_path, new_data, 'utf-8')
+            return True
+        else:
+            return False
 
     def update_init_version(self, file_path, version):
         # example: version_info = (0, 0, 9)
-        re_ptn = '(version_info\s*=\s*[\'\"]\())(\d+(?:,\s*\d+){2})(\))'
+        re_ptn = '(version_info\s*=\s*\()(\d+(?:,\s*\d+){2})(\))'
         src_data = file_util.read_file_content(file_path)
         target_version = ', '.join(re.split('\.\s*', version))
-        new_data = re.sub(re_ptn, '\g<1>{}\g<3>'.format(target_version), src_data)
+        new_data = re.sub(re_ptn, f'\g<1>{target_version}\g<3>', src_data)
         if new_data != src_data:
             file_util.write_to_file(file_path, new_data, 'utf-8')
+            return True
+        else:
+            return False
     
-            
+    def build_wheel(self):
+        cmd_str = 'python setup.py sdist bdist_wheel'
+        result = exec_cmd.run_cmd_for_code_in_specified_dir(self.git_root, cmd_str)
+        if result != 0:
+            raise Exception('build wheel failed!')
+
+    def upload_to_pypi(self):
+        if self.is_test:
+            target_url = self.target_url_test
+        else:
+            target_url = self.target_url_formal
+
+        cmd_str = f'twine upload --repository-url {target_url} dist/{self.module_name}-{self.ver_name}*'
+        result = exec_cmd.run_cmd_for_code_in_specified_dir(self.git_root, cmd_str)
+        if result != 0:
+            raise Exception('upload to pypi failed!')
+
+    def commit_to_repo(self):
+        git_root = self.git_root
+
+        # 先判断git目录状态是否正常
+        if not git_util.is_repository(git_root):
+            raise Exception(f'{git_root} is not a valid git source directory!')
+
+        setup_path = file_util.normalpath(self.setup_path)
+        init_path = file_util.normalpath(self.init_path)
+        paths = []            
+        paths.append(setup_path)
+        paths.append(init_path)
+        msg = f'updated {self.module_name} version.'
+        git_util.push_to_remote(paths, msg, repository=None, refspecs=None, _dir=git_root)
+
+
+def test_upload_to_pypi():
+    target_url = 'https://test.pypi.org/legacy/'
+    module_name = 'bc_dock_util'
+    ver_name = '0.0.10'
+    git_root = 'E:\\work\\bc_dock_util'
+    cmd_str = f'twine upload --repository-url {target_url} dist/{module_name}-{ver_name}*'
+    # result = exec_cmd.run_cmd_for_code_in_specified_dir(git_root, cmd_str)
+    # if result != 0:
+        # raise Exception('upload to pypi failed!')
+
+    # proc = subprocess.Popen(cmd_str, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, universal_newlines=True, cwd=git_root)
+    proc = subprocess.Popen(cmd_str.split(), stdin=subprocess.PIPE, cwd=git_root)
+    try:
+        time.sleep(3)
+        # print(proc.stdout.readline())
+        proc.stdin.write(b'caifh\n')
+        # proc.stdin.write(b'dir\n')
+        proc.stdin.flush()
+        # print(proc.poll())
+        time.sleep(3)
+        # print(proc.stdout.readline())
+        proc.stdin.write(b'Temp19811205\n')
+        # proc.stdin.write(b'cd ..\n')
+        proc.stdin.flush()
+        # print(proc.stdout.readline())
+        proc.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        outs, errs = proc.communicate()
+        print(f'outs: {outs}, errs: {errs}.')
+
+
+def test_upload_to_pypi_with_pexpect():
+    target_url = 'https://test.pypi.org/legacy/'
+    module_name = 'bc_dock_util'
+    ver_name = '0.0.10'
+    cmd_str = f'twine upload --repository-url {target_url} dist/{module_name}-{ver_name}*'
+
+    child = pexpect.spawn(cmd_str)
+    child.expect('Enter your username:')
+    child.sendline('caifh')
+    child.expect('Enter your password:')
+    child.sendline('Temp19811205')
+
+
 # 对输入参数进行解析，设置相应参数
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='update the module in python package index.')
@@ -102,7 +201,7 @@ def get_args(src_args=None):
     parser.add_argument('src', metavar='src', help='the source directory to process.')
     parser.add_argument('-u', dest='to_update', action='store_true', default=False,
                         help='indicate to get or update code firstly')
-    parser.add_argument('--verno', metavar='ver_no', dest='ver_no', type=int, default=0, help='version release number')
+    parser.add_argument('--vername', metavar='ver_name', dest='ver_name', help='version name')
     parser.add_argument('-t', dest='is_test', action='store_true', default=False,
                         help='indicate to upload to test repository')
     parser.add_argument('-c', dest='to_commit', action='store_true', default=False,
@@ -119,7 +218,9 @@ def main(args):
 
     
 if __name__ == '__main__':
-#     test_args = 'a b -i -u'.split()
-    test_args = None
-    args = get_args(test_args)
-    utility.measure_time(main, args)
+    # test_args = 'a b -i -u'.split()
+    # test_args = None
+    # args = get_args(test_args)
+    # utility.measure_time(main, args)
+
+    test_upload_to_pypi_with_pexpect()
