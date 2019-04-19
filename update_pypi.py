@@ -53,15 +53,27 @@ class Manager:
             git_util.revert(self.git_root)
             git_util.update(self.git_root, None, self.branch)
 
+        if not self.ver_name:
+            setup_content = file_util.read_file_content(self.setup_path)
+            self.ver_name = self._get_version_name(setup_content)
+
         # 先校验设置的版本格式是否正确
         if not self.is_valid_version(self.ver_name):
             raise Exception(f'the verion {self.ver_name} is invalid!')
 
         is_updated = self.update_module_version(self.ver_name)
-        self.build_wheel()
-        self.upload_to_pypi()
+        if is_updated:
+            print(f'updated version name with {self.ver_name}.')
+        else:
+            print(f'remain version name as {self.ver_name}.')
 
-        if is_updated and self.to_commit:
+        if self.to_build:
+            self.build_wheel()
+
+        if self.to_upload:
+            self.upload_to_pypi()
+
+        if self.to_commit:
             self.commit_to_repo()
 
     def is_valid_version(self, version):
@@ -87,6 +99,15 @@ class Manager:
     def _get_module_name(self, data):
         # example: name='creditutils'
         re_ptn = 'name\s*=\s*[\'\"](\w+)[\'\"]'
+        result = re.search(re_ptn, data)
+        if result:
+            return result.group(1)
+        else:
+            return None
+
+    def _get_version_name(self, data):
+        # example: version='0.0.11'
+        re_ptn = 'version\s*=\s*[\'\"]([\.\d]+)[\'\"]'
         result = re.search(re_ptn, data)
         if result:
             return result.group(1)
@@ -141,13 +162,25 @@ class Manager:
         if not git_util.is_repository(git_root):
             raise Exception(f'{git_root} is not a valid git source directory!')
 
-        setup_path = file_util.normalpath(self.setup_path)
-        init_path = file_util.normalpath(self.init_path)
+        setup_path = self.setup_path[len(git_root):]
+        init_path = self.init_path[len(git_root):]
+        relative_setup_path = self.get_relative_path(setup_path)
+        relative_init_path = self.get_relative_path(init_path)
+
         paths = []            
-        paths.append(setup_path)
-        paths.append(init_path)
-        msg = f'updated {self.module_name} version.'
+        paths.append(relative_setup_path)
+        paths.append(relative_init_path)
+        msg = f'updated {self.module_name} version with {self.ver_name}.'
         git_util.push_to_remote(paths, msg, repository=None, refspecs=None, _dir=git_root)
+
+    def get_relative_path(self, ori_path):
+        mid_path = file_util.normal_unix_path(ori_path)
+        if mid_path.startswith(file_util.unix_sep):
+            result = mid_path[len(file_util.unix_sep):]
+        else:
+            result = mid_path
+
+        return result
 
 
 def test_upload_to_pypi():
@@ -204,8 +237,11 @@ def get_args(src_args=None):
     parser.add_argument('-u', dest='to_update', action='store_true', default=False,
                         help='indicate to get or update code firstly')
     parser.add_argument('--vername', metavar='ver_name', dest='ver_name', help='version name')
+    parser.add_argument('-b', dest='to_build', action='store_true', default=False, help='indicate to build')
     parser.add_argument('-t', dest='is_test', action='store_true', default=False,
                         help='indicate to upload to test repository')
+    parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
+                        help='indicate to upload build files to pypi')
     parser.add_argument('-c', dest='to_commit', action='store_true', default=False,
                         help='indicate to commit to repository')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
