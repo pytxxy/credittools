@@ -24,7 +24,7 @@ import os
 import re
 import subprocess
 import time
-import pexpect
+
 import creditutils.trivial_util as utility
 import creditutils.file_util as file_util
 import creditutils.git_util as git_util
@@ -128,9 +128,10 @@ class Manager:
         else:
             target_url = self.target_url_formal
 
+        time_to_wait = 120
         cmd_str = f'twine upload --repository-url {target_url} dist/{self.module_name}-{self.ver_name}*'
-        result = exec_cmd.run_cmd_for_code_in_specified_dir(self.git_root, cmd_str)
-        if result != 0:
+        result = subprocess.run(cmd_str, shell=True, cwd=self.git_root, timeout=time_to_wait)
+        if result.returncode != 0:
             raise Exception('upload to pypi failed!')
 
     def commit_to_repo(self):
@@ -182,6 +183,7 @@ def test_upload_to_pypi():
 
 
 def test_upload_to_pypi_with_pexpect():
+    import pexpect
     target_url = 'https://test.pypi.org/legacy/'
     module_name = 'bc_dock_util'
     ver_name = '0.0.10'
@@ -212,6 +214,7 @@ def get_args(src_args=None):
 
     return parser.parse_args(src_args)    
 
+
 def main(args):
     manager = Manager(args)
     manager.process()
@@ -219,8 +222,6 @@ def main(args):
     
 if __name__ == '__main__':
     # test_args = 'a b -i -u'.split()
-    # test_args = None
-    # args = get_args(test_args)
-    # utility.measure_time(main, args)
-
-    test_upload_to_pypi_with_pexpect()
+    test_args = None
+    args = get_args(test_args)
+    utility.measure_time(main, args)
