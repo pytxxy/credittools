@@ -21,8 +21,12 @@ class BuildManager(build_base.BuildManager):
             pod_path = myfile.normalpath(pod_path)
             cmd_str = 'pod install'
             cmd_update_str = 'pod update'
-            exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
-            exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
+            pods_path = pod_path + os.sep + 'Pods'
+            pods_path = myfile.normalpath(pods_path)
+            if os.path.exists(pods_path):
+                exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
+            else:
+                exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
             
         # 先恢复正常的编译配置
         reinit_config_script_path = self.project_path + os.sep + 'pytxxy/Projects/pytxxy_ios/init.rb'
