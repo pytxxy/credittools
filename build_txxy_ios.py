@@ -21,8 +21,12 @@ class BuildManager(build_base.BuildManager):
             pod_path = myfile.normalpath(pod_path)
             cmd_str = 'pod install'
             cmd_update_str = 'pod update'
-            exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
-            exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
+            pods_path = pod_path + os.sep + 'Pods'
+            pods_path = myfile.normalpath(pods_path)
+            if os.path.exists(pods_path):
+                exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
+            else:
+                exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
             
         # 先恢复正常的编译配置
         reinit_config_script_path = self.project_path + os.sep + 'pytxxy/Projects/pytxxy_ios/init.rb'
@@ -51,7 +55,10 @@ class BuildManager(build_base.BuildManager):
 
         # 更新构建时间
         build_base.update_plist_item(info_plist_path, 'build_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-        
+
+
+        # 更新api版本号
+        build_base.update_plist_item(info_plist_path, 'TxxyVersion', self.api_ver)
         # 更新OCR授权文件
         # target = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.OCR_CER_FLAG][BuildConfigParser.TARGET_FLAG]
         # target = myfile.normalize_path(target)
@@ -84,6 +91,8 @@ def get_args(src_args=None):
     parser.add_argument('--vercode', metavar='ver_code', dest='ver_code', help='version code')
     parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, choices=['dev', 'test', 'test2', 'pre', 'pregray', 'pro', 'gray', 'flight'], help='dev: develop environment; test: test environment; test2: test2 environment; pre: pre-release environment; pregray: pre-release gray environment;  pro: production environment; gray: gray environment; flight: Testflight;')
     parser.add_argument('--vertype', metavar='ver_type', dest='ver_type', type=str, choices=['e', 'p'], help='e: enterprise; p: personal;')
+    parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', help='api version code')
+
     
     parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
     parser.add_argument('--svnpwd', metavar='svn_pwd', dest='svn_pwd', help='subversion password')
