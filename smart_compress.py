@@ -202,6 +202,7 @@ class ProcessManager:
     # 检测png 文件是否包含压缩标识
     @staticmethod
     def check_if_png_compressed(file_path, compressed_identify, old_compressed_identify):
+        # print(f'file_path: {file_path}.')
         data = png_util.get_text_chunk_data(file_path, 1)
         if data:
             if data == compressed_identify:

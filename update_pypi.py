@@ -8,6 +8,16 @@ Created on 2019年4月15日
 
 """
 更新PyPI的大体步骤如下：
+前期准备工作：
+1.安装twine，具体如下：
+  linux: python3 -m pip install --user --upgrade twine
+  windows: py -3 -m pip install --upgrade twine
+2.版本名称规范：
+  PEP 440 -- Version Identification and Dependency Specification
+  [N!]N(.N)*[{a|b|rc}N][.postN][.devN]
+  ^(\d+!)?\d+(\.\d+)*(((a)|(b)|(r?c))\d+)?(\.post\d+)?(\.dev\d+)?$
+
+具体操作：
 1.更新当前git库(可选，依赖于是本地直接上传，还是从远程更新上传)；
 2.更新版本编号；
 3.使用“python setup.py sdist bdist_wheel”命令行执行打包操作；
@@ -77,7 +87,7 @@ class Manager:
             self.commit_to_repo()
 
     def is_valid_version(self, version):
-        re_ptn = '\d+(?:\.\d+){2}'
+        re_ptn = '^(\d+!)?\d+(\.\d+)*(((a)|(b)|(r?c))\d+)?(\.post\d+)?(\.dev\d+)?$'
         result = re.match(re_ptn, version)
         if result:
             return True
@@ -116,7 +126,7 @@ class Manager:
 
     def update_setup_version(self, file_path, version):
         # example: version='0.0.2'
-        re_ptn = '(version\s*=\s*[\'\"])(\d+(?:\.\d+){2})([\'\"])'
+        re_ptn = '(version\s*=\s*[\'\"])([^\'\"]+])([\'\"])'
         src_data = file_util.read_file_content(file_path)
         new_data = re.sub(re_ptn, '\g<1>{}\g<3>'.format(version), src_data)
         if new_data != src_data:

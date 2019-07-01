@@ -11,12 +11,11 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "--vername",
-                "0.0.10",
-                "-t",
-                "--branch",
-                "develop",
-                "E:\\work\\bc_dock_util"
+                "-k",
+                "qahQCDeQvDgpjhrMJ2qX58ZGZpzia0AR",
+                "--old",
+                "txxyCompression",
+                "E:\\temp\\home_page\\dst"
             ]
         },
         {

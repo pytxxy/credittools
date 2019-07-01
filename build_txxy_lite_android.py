@@ -2,8 +2,8 @@
 # 20171101 19:00 最大化地利用好gradle 做编译配置工作，对python 编译脚本相应地进行精简
 import os
 import time
-
 import re
+from enum import IntEnum
 
 import ftp_upload
 import creditutils.apk_builder_util as apk_builder
@@ -20,6 +20,9 @@ import protect_android_app as protect_app
 import creditutils.apk_util as apk
 import creditutils.zip_util as zip_util
 import creditutils.apk_util as apk_util
+
+
+BuilderVer = IntEnum('BuilderVer', ('JavaLast', 'Kotlin01'))
 
 
 class BuilderLabel:
@@ -65,6 +68,7 @@ class BuilderLabel:
 
     COVERAGE_FLAG = 'coverage'
     COMPILE_FLAG = 'compile'
+    BUILDER_VER_FLAG = 'builder_ver'
 
     OUTPUT_DIRECTORY_FLAG = 'output_directory'
     OUTPUT_NAME_FLAG = 'output_name'
@@ -228,6 +232,12 @@ class ProjectBuilder:
 
     # 更新通用信息
     def update_info(self):
+        builder_ver = self.info[BuilderLabel.BUILDER_VER_FLAG]
+
+        # 新的kotlin工程，配置都已迁移到gradle脚本，不再需要python脚本进行处理
+        if builder_ver != BuilderVer.JavaLast:
+            return
+
         # 准备好解密文件环境
         enc_bin_path = self.info[BuilderLabel.ENC_BIN_PATH_FLAG]
         preproc = FileEncryptDecrypt(enc_bin_path)
@@ -589,6 +599,7 @@ class BuildManager:
         params[BuilderLabel.PRJ_ROOT_FLAG] = self.prj_root
         params[BuilderLabel.MAIN_FLAG] = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
             BuildConfigLabel.MAIN_FLAG]
+        params[BuilderLabel.BUILDER_VER_FLAG] = self.builder_ver
 
         bin_name = self.ori_build_config[BuildConfigLabel.ENCRYPT_FLAG][BuildConfigLabel.BIN_NAME_FLAG]
         enc_bin_path = os.path.join(self.work_path, bin_name)
@@ -835,6 +846,7 @@ def get_args(src_args=None):
                         choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
+    parser.add_argument('--builderver', metavar='builder_ver', dest='builder_ver', default=BuilderVer.JavaLast, type=int, help='branch name')
 
     #     parser.print_help()
 

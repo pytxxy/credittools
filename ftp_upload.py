@@ -190,11 +190,11 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version,
 
 
 if __name__ == '__main__':
-    # upload_to_sftp(sftp_config_path='/Users/apple/Desktop', ver_name_code='3.4.8beta_t_01',
-    #                ver_env='test', svn_version='abcfdf', mobile_os='Android',
-    #                local_dir_path='/Users/apple/Documents/build_script/ios/pytxxy/output/test/20180730_153005',
-    #                target_file_name='5.0.0beta_t_02-264-20180730.ipa_data.zip',
-    #                source_file_name='5.0.0beta_t_02-264-20180730.ipa_data.zip')
+    upload_to_sftp(sftp_config_path=r'D:\auto_build\pytxxy', ver_name_code='4.0.1beta_t_01',
+                   ver_env='test', svn_version='610b85b4d600b266b1c3c2dc6c3c06f789877290', mobile_os='Android',
+                   local_dir_path=r'D:\auto_build\pytxxy\output\test\20190424_093723',
+                   target_file_name='4.0.1beta_t_01-526-20190424.apk',
+                   source_file_name='4.0.1beta_t_01-526-20190424.apk')
 
-    for s in sys.path:
-        print(s)
+    # for s in sys.path:
+    #     print(s)
