@@ -77,6 +77,7 @@ class BuilderLabel:
     VER_NO_FLAG = 'ver_no'
     IS_TEST_FLAG = 'is_test'
     DEMO_LABEL_FLAG = 'demo_label'
+    API_VER_FLAG = 'api_ver'
 
     LABEL_FLAG = 'label'
     BETA_LABEL_FLAG = 'beta_label'
@@ -87,9 +88,14 @@ class BuilderLabel:
 class BuildCmd:
     pre_cmd = 'gradlew.bat --configure-on-demand clean'
 
-    map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'for_publish',
+    map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'for_publish',
                'coverage_enabled', 'httpdns', 'demo_label']
-    cmd_name_format = 'gradlew.bat --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+
+    cmd_format = 'gradlew.bat --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} ' \
+                      '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
+
+    cmd_format_without_api_ver = 'gradlew.bat --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} ' \
                       '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
 
@@ -101,6 +107,7 @@ class BuildCmd:
         self.ver_name = '1.0.0'
         self.ver_code = 0
         self.ver_no = '00'
+        self.api_ver = None
         self.for_publish = str(True).lower()
         self.coverage_enabled = str(True).lower()
         self.httpdns = str(False).lower()
@@ -125,6 +132,7 @@ class BuildCmd:
         self.ver_name = info[BuilderLabel.VER_NAME_FLAG]
         self.ver_code = info[BuilderLabel.VER_CODE_FLAG]
         self.ver_no = '{:02d}'.format(info[BuilderLabel.VER_NO_FLAG])
+        self.api_ver = info[BuilderLabel.API_VER_FLAG]
 
         env_mode = info[BuilderLabel.ENV_MODE_FLAG]
         self.coverage_enabled = info[BuilderLabel.COVERAGE_FLAG][BuilderLabel.COMPILE_FLAG][env_mode].lower()
@@ -134,15 +142,22 @@ class BuildCmd:
     def get_map(self):
         rtn_map = {}
         for item in BuildCmd.map_key:
-            rtn_map[item] = getattr(self, item)
+            value = getattr(self, item)
+            if value:
+                rtn_map[item] = getattr(self, item)
 
         return rtn_map
 
     def get_build_cmd(self, info):
         self.update_value(info)
         params = self.get_map()
-        cmd_str = BuildCmd.cmd_name_format.format(**params)
-        # print(cmd_str)
+        if BuilderLabel.API_VER_FLAG in params:
+            cmd_format = BuildCmd.cmd_format
+        else:
+            cmd_format = BuildCmd.cmd_format_without_api_ver
+
+        cmd_str = cmd_format.format(**params)
+        print(cmd_str)
 
         return cmd_str
 
@@ -397,32 +412,6 @@ class NetworkConfigUpdater:
         if self.modify_flag:
             file_util.write_to_file(self.src_path, self.src_data, 'utf-8')
 
-    # 使用正则表达式的方式实现，便于后续扩展
-    def _update_config_with_re(self, mode):
-        # example: "url": "http://120.197.113.2:8181",
-        pattern = '^(\s*"url"\:\s+"http\://(?:\d+\.){3}\d+\:)\d+'
-        dst_port = NetworkConfigUpdater.MODE_MAP[mode]
-        ptn = re.compile(pattern, flags=(re.I | re.M))
-        re_sep = re.escape('#!#!#')
-        re_rep_unit = re_sep + re.escape(dst_port)
-
-        modify_flag = False
-        print(self.src_data)
-        new_data = ptn.sub('\\1' + re_rep_unit, self.src_data)
-        if new_data != self.src_data:
-            modify_flag = True
-            print('-' * 80)
-            print(new_data)
-            self.src_data = new_data.replace(re_sep, '')
-            print('-' * 80)
-            print(self.src_data)
-
-        if modify_flag:
-            self.modify_flag = True
-            print('update network port with ' + dst_port + ' success.')
-        else:
-            print('update network port with ' + dst_port + ' failed!')
-
     # 使用直接替换的方式实现
     def _update_config(self, target_info):
         modify_flag = False
@@ -431,11 +420,15 @@ class NetworkConfigUpdater:
         for key in target_info:
             ptn_str = ptn_str_format.format(key)
             ptn = re.compile(ptn_str, flags=(re.I | re.M))
-            # 避免自引用和value值 串在一起引起混淆，所以在中间添加特殊字符进行分隔
-            re_sep = re.escape('#!#!#')
-            re_rep_unit = re_sep + re.escape(target_info[key])
-            new_data = ptn.sub('\\1' + re_rep_unit + '\\3', self.src_data)
-            new_data = new_data.replace(re_rep_unit, target_info[key])
+            # 避免自引用和value值 串在一起引起混淆，所以在中间添加特殊字符进行分隔(有更优雅的方式实现该功能，所以进行了替换)
+            # re_sep = re.escape('#!#!#')
+            # re_rep_unit = re_sep + re.escape(target_info[key])
+            # new_data = ptn.sub('\\1' + re_rep_unit + '\\3', self.src_data)
+            # new_data = new_data.replace(re_rep_unit, target_info[key])
+
+            re_rep_unit = re.escape(target_info[key])
+            new_data = ptn.sub('\\g<1>' + re_rep_unit + '\\g<3>', self.src_data)
+
             if new_data != self.src_data:
                 modify_flag = True
                 #                 print('-'*80)
@@ -645,6 +638,7 @@ class BuildManager:
         params[BuilderLabel.VER_NAME_FLAG] = self.ver_name
         params[BuilderLabel.VER_CODE_FLAG] = self.ver_code
         params[BuilderLabel.VER_NO_FLAG] = self.ver_no
+        params[BuilderLabel.API_VER_FLAG] = self.api_ver
         params[BuilderLabel.IS_TEST_FLAG] = self.is_test
 
         params[BuilderLabel.ENV_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG]
@@ -836,6 +830,8 @@ def get_args(src_args=None):
                              'pre: pre-release environment; pregray: pre-gray-release environment; '
                              'gray: gray-release environment;  pro: production environment;')
 
+    parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', type=str, help='network api version number')
+
     parser.add_argument('--test', dest='is_test', action='store_true', default=False,
                         help='indicate just to test config')
     parser.add_argument('--align', dest='to_align', action='store_true', default=True,
@@ -846,7 +842,7 @@ def get_args(src_args=None):
                         choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
-    parser.add_argument('--builderver', metavar='builder_ver', dest='builder_ver', default=BuilderVer.JavaLast, type=int, help='branch name')
+    parser.add_argument('--builderver', metavar='builder_ver', dest='builder_ver', default=BuilderVer.Kotlin01, type=int, help='branch name')
 
     #     parser.print_help()
 
