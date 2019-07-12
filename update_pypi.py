@@ -33,6 +33,13 @@ https://packaging.python.org/tutorials/packaging-projects/
 
 使用样例:
 update_pypi.bat -u --vername 0.0.9b1.dev1 -b -t --upload -c --branch master D:\work\bc_dock_util
+
+从测试地址安装模块样例
+pip3 install --index-url https://test.pypi.org/simple/ your-package
+pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple your-package
+pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple bc_dock_util
+pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple  -U bc_dock_util
+pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple bc_dock_util==0.0.7
 """
 
 import argparse
