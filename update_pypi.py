@@ -13,9 +13,9 @@ Created on 2019年4月15日
   linux: python3 -m pip install --user --upgrade twine
   windows: py -3 -m pip install --upgrade twine
 2.版本名称规范：
-  PEP 440 -- Version Identification and Dependency Specification
+  PEP 440 -- Version Identification and Dependency Specification(https://www.python.org/dev/peps/pep-0440/)
   [N!]N(.N)*[{a|b|rc}N][.postN][.devN]
-  ^(\d+!)?\d+(\.\d+)*(((a)|(b)|(r?c))\d+)?(\.post\d+)?(\.dev\d+)?$
+  ^((?:\d+!)?\d+(?:\.\d+)*)(?:(?:(?:a)|(?:b)|(?:r?c))\d+)?(?:\.post\d+)?(?:\.dev\d+)?$
 
 具体操作：
 1.更新当前git库(可选，依赖于是本地直接上传，还是从远程更新上传)；
@@ -25,8 +25,14 @@ Created on 2019年4月15日
 5.上传正式环境使用命令为“twine upload --repository-url https://upload.pypi.org/legacy/ dist/bc_dock_util-0.0.9*”（可以简化为“twine upload dist/bc_dock_util-0.0.9*”）；
 6.上传成功，也需要同步更新github相应配置里的版本号，该方式可选；
 
+官方新建模块帮助文档链接如下：
+https://packaging.python.org/tutorials/packaging-projects/
+
 特别说明：
 1.当前该脚本可在windows7环境下面可用，且需确保默认python可执行程序是python3版本；
+
+使用样例:
+update_pypi.bat -u --vername 0.0.9b1.dev1 -b -t --upload -c --branch master D:\work\bc_dock_util
 """
 
 import argparse
@@ -41,6 +47,8 @@ import creditutils.git_util as git_util
 import creditutils.exec_cmd as exec_cmd
 
 class Manager:
+    VER_PTN_STR = '^((?:\d+!)?\d+(?:\.\d+)*)(?:(?:(?:a)|(?:b)|(?:r?c))\d+)?(?:\.post\d+)?(?:\.dev\d+)?$'
+
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
         for name, value in vars(args).items():
@@ -56,6 +64,7 @@ class Manager:
         self.setup_path = os.path.join(self.git_root, setup_name)
 
         self.init_path = None
+        self.main_ver = None
         
     def process(self):
         if self.to_update:
@@ -70,6 +79,8 @@ class Manager:
         # 先校验设置的版本格式是否正确
         if not self.is_valid_version(self.ver_name):
             raise Exception(f'the verion {self.ver_name} is invalid!')
+
+        self.main_ver = self.get_main_version(self.ver_name)
 
         is_updated = self.update_module_version(self.ver_name)
         if is_updated:
@@ -86,8 +97,18 @@ class Manager:
         if self.to_commit:
             self.commit_to_repo()
 
-    def is_valid_version(self, version):
-        re_ptn = '^(\d+!)?\d+(\.\d+)*(((a)|(b)|(r?c))\d+)?(\.post\d+)?(\.dev\d+)?$'
+    @staticmethod
+    def get_main_version(version):
+        re_ptn = Manager.VER_PTN_STR
+        result = re.match(re_ptn, version)
+        if result:
+            return result.group(1)
+        else:
+            return None
+
+    @staticmethod
+    def is_valid_version(version):
+        re_ptn = Manager.VER_PTN_STR
         result = re.match(re_ptn, version)
         if result:
             return True
@@ -100,11 +121,11 @@ class Manager:
         if not self.module_name:
             raise Exception('to get module name failed!')
 
-        self.update_setup_version(self.setup_path, version)
+        return self.update_setup_version(self.setup_path, version)
         
-        init_name = '__init__.py'
-        self.init_path = os.path.join(self.git_root, self.module_name, init_name)
-        return self.update_init_version(self.init_path, version)
+        # init_name = '__init__.py'
+        # self.init_path = os.path.join(self.git_root, self.module_name, init_name)
+        # return self.update_init_version(self.init_path, version)
 
     def _get_module_name(self, data):
         # example: name='creditutils'
@@ -117,7 +138,7 @@ class Manager:
 
     def _get_version_name(self, data):
         # example: version='0.0.11'
-        re_ptn = 'version\s*=\s*[\'\"]([\.\d]+)[\'\"]'
+        re_ptn = 'version\s*=\s*[\'\"]([^\'\"]*)[\'\"]'
         result = re.search(re_ptn, data)
         if result:
             return result.group(1)
@@ -126,7 +147,7 @@ class Manager:
 
     def update_setup_version(self, file_path, version):
         # example: version='0.0.2'
-        re_ptn = '(version\s*=\s*[\'\"])([^\'\"]+])([\'\"])'
+        re_ptn = '(version\s*=\s*[\'\"])([^\'\"]*)([\'\"])'
         src_data = file_util.read_file_content(file_path)
         new_data = re.sub(re_ptn, '\g<1>{}\g<3>'.format(version), src_data)
         if new_data != src_data:
@@ -173,13 +194,13 @@ class Manager:
             raise Exception(f'{git_root} is not a valid git source directory!')
 
         setup_path = self.setup_path[len(git_root):]
-        init_path = self.init_path[len(git_root):]
+        # init_path = self.init_path[len(git_root):]
         relative_setup_path = self.get_relative_path(setup_path)
-        relative_init_path = self.get_relative_path(init_path)
+        # relative_init_path = self.get_relative_path(init_path)
 
         paths = []            
         paths.append(relative_setup_path)
-        paths.append(relative_init_path)
+        # paths.append(relative_init_path)
         msg = f'updated {self.module_name} version with {self.ver_name}.'
         git_util.push_to_remote(paths, msg, repository=None, refspecs=None, _dir=git_root)
 
@@ -197,7 +218,7 @@ def test_upload_to_pypi():
     target_url = 'https://test.pypi.org/legacy/'
     module_name = 'bc_dock_util'
     ver_name = '0.0.10'
-    git_root = 'E:\\work\\bc_dock_util'
+    git_root = 'D:\\work\\bc_dock_util'
     cmd_str = f'twine upload --repository-url {target_url} dist/{module_name}-{ver_name}*'
     # result = exec_cmd.run_cmd_for_code_in_specified_dir(git_root, cmd_str)
     # if result != 0:
@@ -226,17 +247,19 @@ def test_upload_to_pypi():
 
 
 def test_upload_to_pypi_with_pexpect():
-    import pexpect
-    target_url = 'https://test.pypi.org/legacy/'
-    module_name = 'bc_dock_util'
-    ver_name = '0.0.10'
-    cmd_str = f'twine upload --repository-url {target_url} dist/{module_name}-{ver_name}*'
+    # 本来想实现自动输入用户名和密码的功能，实际验证发现不可行，当前先使用手动输入用户名和密码方案
+    # import pexpect
+    # target_url = 'https://test.pypi.org/legacy/'
+    # module_name = 'bc_dock_util'
+    # ver_name = '0.0.10'
+    # cmd_str = f'twine upload --repository-url {target_url} dist/{module_name}-{ver_name}*'
 
-    child = pexpect.spawn(cmd_str)
-    child.expect('Enter your username:')
-    child.sendline('caifh')
-    child.expect('Enter your password:')
-    child.sendline('Temp19811205')
+    # child = pexpect.spawn(cmd_str)
+    # child.expect('Enter your username:')
+    # child.sendline('caifh')
+    # child.expect('Enter your password:')
+    # child.sendline('Temp19811205')
+    pass
 
 
 # 对输入参数进行解析，设置相应参数
