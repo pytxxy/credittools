@@ -47,6 +47,7 @@ import os
 import re
 import subprocess
 import time
+import glob
 
 import creditutils.trivial_util as utility
 import creditutils.file_util as file_util
@@ -94,6 +95,9 @@ class Manager:
             print(f'updated version name with {self.ver_name}.')
         else:
             print(f'remain version name as {self.ver_name}.')
+
+        if self.to_clean:
+            self.clean_builds()
 
         if self.to_build:
             self.build_wheel()
@@ -175,6 +179,18 @@ class Manager:
         else:
             return False
     
+    @staticmethod
+    def list_file(curr_dir, name_ptn):
+        for i in glob.glob(os.path.join(curr_dir, name_ptn)):
+            yield i
+
+    def clean_builds(self):
+        curr_dir = os.path.join(self.git_root, 'dist')
+        name_ptn = f'{self.module_name}-{self.ver_name}*'
+        for item in self.list_file(curr_dir, name_ptn):
+            # print(item)
+            os.remove(item)
+
     def build_wheel(self):
         cmd_str = 'python setup.py sdist bdist_wheel'
         result = exec_cmd.run_cmd_for_code_in_specified_dir(self.git_root, cmd_str)
@@ -280,6 +296,8 @@ def get_args(src_args=None):
     parser.add_argument('-b', dest='to_build', action='store_true', default=False, help='indicate to build')
     parser.add_argument('-t', dest='is_test', action='store_true', default=False,
                         help='indicate to upload to test repository')
+    parser.add_argument('--clean', dest='to_clean', action='store_true', default=False,
+                        help='indicate to clean existing builds')
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
                         help='indicate to upload build files to pypi')
     parser.add_argument('-c', dest='to_commit', action='store_true', default=False,
