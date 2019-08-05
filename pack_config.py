@@ -55,7 +55,8 @@ _UPLOAD_SUB_DIRS = {
     _UPLOAD_TYPE_ANDROID: 'android',
     _UPLOAD_TYPE_IOS: 'ios'
 }
-
+_APP_CODE_TXXY = 'txxy'
+_APP_CODE_XYCX = 'xycx'
 
 class FileMap:
     _src_ptn_fmt = '^[\.\w\-]+({})?(\.\w+)?({}[\.\w\-]+({})?(\.\w+)?)*$'
@@ -127,11 +128,13 @@ class BuildConfigParser:
     SVN_URL_FLAG = 'svn_url'
 
     def __init__(self, config_path):
+        for name, value in vars(args).items():
+            setattr(self, name, value)
         self.config_path = config_path
 
     def parse(self):
         doc = xmltodict.parse(file_util.read_file_content(self.config_path))
-        self.data = doc[BuildConfigParser.ROOT_FLAG]
+        self.data = doc[BuildConfigParser.ROOT_FLAG][self.app_code]
 
     def get_config(self):
         return self.data
@@ -442,7 +445,6 @@ def process(src_dir, dst_dir, _type=_PACK_TYPE_ALL, filter_folders=[], _upload_t
             upload_target_path_dict[_PACK_SUB_DIRS[_type]] = target_path
 
         commitmanager = CommitManager(args)
-
         if _upload_type == _UPLOAD_TYPE_ALL:
             for item in _UPLOAD_SUB_DIRS:
                 item_key = _UPLOAD_SUB_DIRS[item]
@@ -476,6 +478,8 @@ def get_args(src_args=None):
                         help='commit configure file, path relative to work path')
     parser.add_argument('-v', metavar='svn_ver', dest='svn_ver', action='store', default=None,
                         help='indicate updating to special version')
+    parser.add_argument('-app', metavar='app_code', dest='app_code', action='store',
+                        default=_APP_CODE_TXXY, help='app code')
 
     src_group = parser.add_mutually_exclusive_group()
     src_group.add_argument('-s', dest='type', action='store_const', default=_PACK_TYPE_ALL, const=_PACK_TYPE_SERVER,
