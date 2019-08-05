@@ -90,8 +90,6 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_r
             else:
                 remote_dir = file_util.join_unix_path(remote_dir, mobile_os)
 
-            print(remote_dir)
-            return
 
             # 上传 ipa 包或者 apk 包
             # 判断 sftp 文件夹有没有之前的老包，有的话则需要先删除
