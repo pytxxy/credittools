@@ -51,7 +51,7 @@ class BuildManager(build_base.BuildManager):
         build_base.update_plist_item(info_plist_path, 'CODE_REVISION', code_ver_pre + self.code_ver)
         
         # 更新标识当前是否是编译demo版本的标志
-        build_base.update_plist_item(info_plist_path, 'THIRD_PARTY_TEST', str(self.demo_label).lower())
+        #build_base.update_plist_item(info_plist_path, 'THIRD_PARTY_TEST', str(self.demo_label).lower())
 
         # 更新构建时间
         build_base.update_plist_item(info_plist_path, 'build_time', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))

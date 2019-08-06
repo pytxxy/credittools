@@ -33,10 +33,11 @@ class SFTPConfigFile:
         return self.data
 
 
-def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version,
+def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_root_tag='txxy',
                    local_dir_path='', mobile_os='', target_file_name='', source_file_name=''):
     """
         :param sftp_config_path: sftp 配置文件路径
+        :param sftp_source_path_tag 默认txxy
         :param ver_name_code: 版本号和构建版本 ex: 3.4.6beta_t_01
         :param ver_env: 构建环境
         :param svn_version: svn 版本号 或者 git 版本号
@@ -79,7 +80,8 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version,
                     ver_name = name_code_group[0]
                 else:
                     ver_name = ver_name_code
-            remote_dir = os.path.join(sftp_config_data[_ROOT_SFTP_PATH_FLAG], ver_name, detail_env[ver_env])
+            remote_root_dir =  sftp_config_data[_ROOT_SFTP_PATH_FLAG]
+            remote_dir = os.path.join(remote_root_dir[sftp_root_tag], ver_name, detail_env[ver_env])
             remote_dir = file_util.normal_unix_path(remote_dir)
 
             # 生产版本不一定有ver_code
@@ -87,6 +89,7 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version,
                 remote_dir = file_util.join_unix_path(remote_dir, ver_code, mobile_os)
             else:
                 remote_dir = file_util.join_unix_path(remote_dir, mobile_os)
+
 
             # 上传 ipa 包或者 apk 包
             # 判断 sftp 文件夹有没有之前的老包，有的话则需要先删除
@@ -190,7 +193,7 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version,
 
 
 if __name__ == '__main__':
-    upload_to_sftp(sftp_config_path=r'D:\auto_build\pytxxy', ver_name_code='4.0.1beta_t_01',
+    upload_to_sftp(sftp_config_path=r'/Users/apple/Documents/build_script/ios/pytxxy', sftp_root_tag='txxy',ver_name_code='4.0.1beta_t_01',
                    ver_env='test', svn_version='610b85b4d600b266b1c3c2dc6c3c06f789877290', mobile_os='Android',
                    local_dir_path=r'D:\auto_build\pytxxy\output\test\20190424_093723',
                    target_file_name='4.0.1beta_t_01-526-20190424.apk',
