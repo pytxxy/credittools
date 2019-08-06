@@ -92,7 +92,7 @@ def get_args(src_args=None):
     parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, choices=['dev', 'test', 'test2', 'pre', 'pregray', 'pro', 'gray', 'flight'], help='dev: develop environment; test: test environment; test2: test2 environment; pre: pre-release environment; pregray: pre-release gray environment;  pro: production environment; gray: gray environment; flight: Testflight;')
     parser.add_argument('--vertype', metavar='ver_type', dest='ver_type', type=str, choices=['e', 'p'], help='e: enterprise; p: personal;')
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', help='api version code')
-
+    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, choices=['txxy','xycx'], help='app code name')
     
     parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
     parser.add_argument('--svnpwd', metavar='svn_pwd', dest='svn_pwd', help='subversion password')
