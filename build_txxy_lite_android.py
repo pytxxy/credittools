@@ -78,6 +78,7 @@ class BuilderLabel:
     IS_TEST_FLAG = 'is_test'
     DEMO_LABEL_FLAG = 'demo_label'
     API_VER_FLAG = 'api_ver'
+    APP_CODE_FLAG = 'app_code'
 
     LABEL_FLAG = 'label'
     BETA_LABEL_FLAG = 'beta_label'
@@ -88,14 +89,14 @@ class BuilderLabel:
 class BuildCmd:
     pre_cmd = 'gradlew.bat --configure-on-demand clean'
 
-    map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'for_publish',
+    map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
                'coverage_enabled', 'httpdns', 'demo_label']
 
-    cmd_format = 'gradlew.bat --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+    cmd_format = 'gradlew.bat --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} ' \
                       '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
 
-    cmd_format_without_api_ver = 'gradlew.bat --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+    cmd_format_without_api_ver = 'gradlew.bat --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} ' \
                       '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
 
@@ -108,6 +109,7 @@ class BuildCmd:
         self.ver_code = 0
         self.ver_no = '00'
         self.api_ver = None
+        self.app_code = None
         self.for_publish = str(True).lower()
         self.coverage_enabled = str(True).lower()
         self.httpdns = str(False).lower()
@@ -133,6 +135,7 @@ class BuildCmd:
         self.ver_code = info[BuilderLabel.VER_CODE_FLAG]
         self.ver_no = '{:02d}'.format(info[BuilderLabel.VER_NO_FLAG])
         self.api_ver = info[BuilderLabel.API_VER_FLAG]
+        self.app_code = info[BuilderLabel.APP_CODE_FLAG].capitalize()
 
         env_mode = info[BuilderLabel.ENV_MODE_FLAG]
         self.coverage_enabled = info[BuilderLabel.COVERAGE_FLAG][BuilderLabel.COMPILE_FLAG][env_mode].lower()
@@ -312,12 +315,13 @@ class ProjectBuilder:
     def _get_output_relative_path(self):
         # 网络环境配置
         ori_net_env = self.info[BuilderLabel.NET_ENV_FLAG]
+        app_code = self.info[BuilderLabel.APP_CODE_FLAG] 
         net_env = self.info[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
 
         # 配置为Release还是Debug模式
         build_type = self.info[BuilderLabel.TYPE_FLAG]
 
-        relative_path = os.path.join(net_env, build_type)
+        relative_path = os.path.join(app_code + net_env.capitalize(), build_type)
         print(relative_path)
 
         return relative_path
@@ -639,6 +643,7 @@ class BuildManager:
         params[BuilderLabel.VER_CODE_FLAG] = self.ver_code
         params[BuilderLabel.VER_NO_FLAG] = self.ver_no
         params[BuilderLabel.API_VER_FLAG] = self.api_ver
+        params[BuilderLabel.APP_CODE_FLAG] = self.app_code
         params[BuilderLabel.IS_TEST_FLAG] = self.is_test
 
         params[BuilderLabel.ENV_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG]
@@ -831,6 +836,9 @@ def get_args(src_args=None):
                              'gray: gray-release environment;  pro: production environment;')
 
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', type=str, help='network api version number')
+    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy',
+                        choices=['txxy', 'xycx'],
+                        help='txxy: tian xia xin yong; xycx: xin yong cha xun; ')
 
     parser.add_argument('--test', dest='is_test', action='store_true', default=False,
                         help='indicate just to test config')
@@ -842,7 +850,7 @@ def get_args(src_args=None):
                         choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
-    parser.add_argument('--builderver', metavar='builder_ver', dest='builder_ver', default=BuilderVer.Kotlin01, type=int, help='branch name')
+    parser.add_argument('--builderver', metavar='builder_ver', dest='builder_ver', default=BuilderVer.Kotlin01, type=int, help='specify current builder ver')
 
     #     parser.print_help()
 
