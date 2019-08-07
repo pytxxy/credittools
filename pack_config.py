@@ -126,6 +126,7 @@ class BuildConfigParser:
     SOURCE_PATH_FLAG = 'source_path'
     TARGET_PATH_FLAG = 'target_path'
     SVN_URL_FLAG = 'svn_url'
+    FILTER_FILE_FLAG = 'filter_file'
 
     def __init__(self, config_path):
         for name, value in vars(args).items():
@@ -147,6 +148,7 @@ class CommitManager:
     URL_FLAG = 'url'
     FOLDER_NAME_FLAG = 'folder_name'
     RELATIVE_PATH_FLAG = 'relative_path'
+    PASSWORD_FLAG = 'password'
 
     _TYPE_SVN = 'svn'
     _TYPE_GIT = 'git'
@@ -197,6 +199,10 @@ class CommitManager:
     def commit_item(self, item_key, item, targer_config_path):
         rep_type = item[CommitManager.TYPE_FLAG]
         source_path = self.repository + os.sep + item_key + os.sep + item[CommitManager.FOLDER_NAME_FLAG]
+        zip_password = ''
+        if CommitManager.PASSWORD_FLAG in item:
+            zip_password = item[CommitManager.PASSWORD_FLAG]
+
         # 判断目标文件是否重复
         if source_path in self.success_upload_path_arr:
             raise Exception('重复的目标文件夹"{}"，请检查xml配置文件!'.format(source_path))
@@ -205,7 +211,7 @@ class CommitManager:
             self.commit_with_svn(item[CommitManager.URL_FLAG], source_path, targer_config_path)
         elif CommitManager._TYPE_GIT == rep_type.lower():
             self.commit_with_git(item[CommitManager.URL_FLAG], source_path, item[CommitManager.RELATIVE_PATH_FLAG],
-                                 targer_config_path, item[CommitManager.BRANCH_FLAG])
+                                 targer_config_path, item[CommitManager.BRANCH_FLAG], zip_password)
         else:
             raise Exception('Type {} is invalid!'.format(rep_type))
 
@@ -218,14 +224,14 @@ class CommitManager:
         update_svn_file(to_upload_file_path, targer_config_path, _SVN_UPDATE_MSG)
         self.success_upload_path_arr.append(source_path)
 
-    def commit_with_git(self, source_url, source_path, relative_path, targer_config_path, git_branch_name):
+    def commit_with_git(self, source_url, source_path, relative_path, targer_config_path, git_branch_name, zip_password=None):
         print('\n=====git url {}====='.format(source_url))
         source_path = source_path + os.sep + git_branch_name
         source_path = file_util.normalpath(source_path)
         git.checkout_or_update(source_path, source_url, branch=git_branch_name)
         git_root = git.get_git_root(source_path)
         relative_file_path = relative_path + os.sep + _PACK_TARGET_FILE
-        update_git_file(git_root, relative_file_path, targer_config_path, _SVN_UPDATE_MSG)
+        update_git_file(git_root, relative_file_path, targer_config_path, _SVN_UPDATE_MSG, zip_password)
         self.success_upload_path_arr.append(source_path)
 
 
@@ -260,13 +266,17 @@ class ConfigBuildManager:
             BuildConfigParser.TARGET_PATH_FLAG]
         self.target_path = file_util.normalpath(target_path)
 
+        # 不加入打包的文件
+        self.filter_file = self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
+            BuildConfigParser.FILTER_FILE_FLAG]
+
     def process(self):
         # 进行代码更新操作
         if self.is_update:
             svn_url = self.ori_build_config[BuildConfigParser.SVN_URL_FLAG]
             svn.checkout_or_update(self.source_path, svn_url, self.svn_ver)
 
-        process(self.source_path, self.target_path, self.type, self.filter_folders, self.upload_type)
+        process(self.source_path, self.target_path, self.type, self.filter_folders, self.upload_type, self.filter_file)
 
 
 # 获取第一层配置文件目录，返回文件名数组
@@ -283,7 +293,7 @@ def get_firstfolderitem(src_dir):
 
 
 def process_item(src_dir, dst_dir, temp_dir, _type, ver_code, filter_folders, filter_out=_PACK_FILTER_OUT,
-                 ver_file=_PACK_VER_FILE, target_root_name=_PACK_TARGET_ROOT_NAME, target_file=_PACK_TARGET_FILE):
+                 ver_file=_PACK_VER_FILE, target_root_name=_PACK_TARGET_ROOT_NAME, target_file=_PACK_TARGET_FILE, filter_file=None):
     temp_target_dir = temp_dir + os.sep + target_root_name
     file_map = FileMap(_PACK_FLAGS[_type], src_dir, temp_target_dir)
     func = FileCopy(file_map)
@@ -330,6 +340,20 @@ def process_item(src_dir, dst_dir, temp_dir, _type, ver_code, filter_folders, fi
 
         print('filter out files ok')
 
+    if filter_file:
+        child_temp_dir_arr = get_firstfolderitem(temp_target_dir)
+        for folder_detail_file in filter_file:
+            for list_file in child_temp_dir_arr:
+                list_file_path = temp_target_dir + os.sep + list_file
+                for root, dirs, files in os.walk(list_file_path):
+                    if folder_detail_file in dirs:
+                        shutil.rmtree(os.path.join(root, folder_detail_file))
+                    for name in files:
+                        if folder_detail_file == name:
+                            os.remove(os.path.join(root, folder_detail_file))
+        print('filter files ok')
+
+
     # 将整个配置文件打包
     if target_file:
         target_path = dst_dir + os.sep + target_file
@@ -348,7 +372,7 @@ def get_ver_info(filepath):
     return ver_info.strip()
 
 
-def is_same_config(file_a, file_b):
+def is_same_config(file_a, file_b, zip_password=None):
     temp_dir_a = tempfile.mkdtemp()
     temp_dir_b = tempfile.mkdtemp()
 
@@ -357,7 +381,7 @@ def is_same_config(file_a, file_b):
     ver_file_a = zip_util.unzip_specified_file(file_a, ver_rel_path, temp_dir_a)
     ver_a = get_ver_info(ver_file_a)
 
-    ver_file_b = zip_util.unzip_specified_file(file_b, ver_rel_path, temp_dir_b)
+    ver_file_b = zip_util.unzip_specified_file(file_b, ver_rel_path, temp_dir_b, pwd=bytes(zip_password, encoding="utf8"))
     ver_b = get_ver_info(ver_file_b)
 
     # Clean up the directory yourself
@@ -374,7 +398,7 @@ def update_svn_file(target_file, new_file, msg):
         raise Exception('{} is not a valid svn source directory!'.format(base_dir))
 
     #     if not filecmp.cmp(new_svn_file, svn_target_file, shallow=False):
-    if not is_same_config(new_file, target_file):
+    if not is_same_config(new_file, target_file, zip_password=None):
         file_util.replace_file(new_file, target_file)
         svn_paths = []
         svn_paths.append(target_file)
@@ -383,13 +407,13 @@ def update_svn_file(target_file, new_file, msg):
         print('{} and {} is the same!'.format(new_file, target_file))
 
 
-def update_git_file(git_root, relative_file_path, new_file, msg):
+def update_git_file(git_root, relative_file_path, new_file, msg, zip_password=None):
     # 先判断git目录状态是否正常
     if not git.is_repository(git_root):
         raise Exception('{} is not a valid git source directory!'.format(git_root))
 
     target_file = file_util.normalpath(os.path.join(git_root, relative_file_path))
-    if not is_same_config(new_file, target_file):
+    if not is_same_config(new_file, target_file, zip_password=zip_password):
         file_util.replace_file(new_file, target_file)
         paths = []
         paths.append(relative_file_path)
@@ -398,7 +422,7 @@ def update_git_file(git_root, relative_file_path, new_file, msg):
         print('{} and {} is the same!'.format(new_file, target_file))
 
 
-def process(src_dir, dst_dir, _type=_PACK_TYPE_ALL, filter_folders=[], _upload_type=_UPLOAD_TYPE_NONE):
+def process(src_dir, dst_dir, _type=_PACK_TYPE_ALL, filter_folders=[], _upload_type=_UPLOAD_TYPE_NONE, filter_file_dict=None):
     # 进行提取，过滤，更新操作
     temp_root = tempfile.gettempdir()
     pack_root = temp_root + os.sep + 'pytxxy_config'
@@ -426,11 +450,16 @@ def process(src_dir, dst_dir, _type=_PACK_TYPE_ALL, filter_folders=[], _upload_t
 
         upload_target_path_dict = {}
         # 进行整体或单项提取打包操作
+
+        filter_dir_file = []
+
         if _type == _PACK_TYPE_ALL:
             for item in _PACK_SUB_DIRS:
                 temp_dir = pack_root + os.sep + _PACK_SUB_DIRS[item]
                 target_dir = dst_ver_dir + os.sep + _PACK_SUB_DIRS[item]
-                process_item(src_dir, target_dir, temp_dir, item, ver_code, filter_folders)
+                if _PACK_SUB_DIRS[item] in filter_file_dict:
+                    filter_dir_file = filter_file_dict[_PACK_SUB_DIRS[item]].split(',')
+                process_item(src_dir, target_dir, temp_dir, item, ver_code, filter_folders, filter_file=filter_dir_file)
                 target_file = _PACK_TARGET_FILE
                 target_path = target_dir + os.sep + target_file
                 upload_target_path_dict[_PACK_SUB_DIRS[item]] = target_path
@@ -438,7 +467,9 @@ def process(src_dir, dst_dir, _type=_PACK_TYPE_ALL, filter_folders=[], _upload_t
         else:
             temp_dir = pack_root + os.sep + _PACK_SUB_DIRS[_type]
             target_dir = dst_ver_dir + os.sep + _PACK_SUB_DIRS[_type]
-            process_item(src_dir, target_dir, temp_dir, _type, ver_code, filter_folders)
+            if _type == _PACK_TYPE_IOS:
+                filter_dir_file = filter_file_dict[_PACK_TYPE_IOS].split(',')
+            process_item(src_dir, target_dir, temp_dir, _type, ver_code, filter_folders, filter_file=filter_dir_file)
 
             target_file = _PACK_TARGET_FILE
             target_path = target_dir + os.sep + target_file
@@ -478,8 +509,7 @@ def get_args(src_args=None):
                         help='commit configure file, path relative to work path')
     parser.add_argument('-v', metavar='svn_ver', dest='svn_ver', action='store', default=None,
                         help='indicate updating to special version')
-    parser.add_argument('-app', metavar='app_code', dest='app_code', action='store',
-                        default=_APP_CODE_TXXY, help='app code')
+    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default=_APP_CODE_TXXY, choices=[_APP_CODE_TXXY, _APP_CODE_XYCX], help='app code name')
 
     src_group = parser.add_mutually_exclusive_group()
     src_group.add_argument('-s', dest='type', action='store_const', default=_PACK_TYPE_ALL, const=_PACK_TYPE_SERVER,
