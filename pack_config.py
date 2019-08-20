@@ -267,8 +267,9 @@ class ConfigBuildManager:
         self.target_path = file_util.normalpath(target_path)
 
         # 不加入打包的文件
-        self.filter_file = self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
-            BuildConfigParser.FILTER_FILE_FLAG]
+        self.filter_file = []
+        if BuildConfigParser.FILTER_FILE_FLAG in self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG]:
+            self.filter_file = self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.FILTER_FILE_FLAG]
 
     def process(self):
         # 进行代码更新操作
