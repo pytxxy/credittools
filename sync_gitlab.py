@@ -2,8 +2,14 @@ import os
 import time
 import argparse
 import requests
+import shutil
+import subprocess
+import pprint
 import creditutils.trivial_util as trivial_util
+import creditutils.file_util as file_util
+import creditutils.exec_cmd as exec_cmd
 import gitlab
+import creditutils.git_util as git
 
 # 设计思路说明：
 # 1.先遍历老的gitlab库，将所有的库罗列出来；
@@ -18,8 +24,10 @@ class ApiLabel:
     v4 = 'v4'
 
 class DataLabel:
-    ssh_url_to_repo = 'ssh_url_to_repo'
     id = 'id'
+    name = 'name'
+    ssh_url_to_repo = 'ssh_url_to_repo'
+    path_with_namespace = 'path_with_namespace'
 
 class ProcessManager:
     def __init__(self, args):
@@ -29,23 +37,118 @@ class ProcessManager:
         #         pprint.pprint(vars(self))
 
     def process(self):
-        # self.get_projects_v3(self.src, self.src_token)
-        # self.get_projects_v4(self.dst, self.dst_token)
-        self.get_projects_sync_item(self.src, self.src_token, self.src_api)
-        # self.get_projects_sync_item(self.dst, self.dst_token, self.dst_api)
+        src_items = self.get_projects_sync_item(self.src, self.src_token, self.src_api)
+        dst_items = self.get_projects_sync_item(self.dst, self.dst_token, self.dst_api)
+        other_info = dict()
+        for k, v in src_items.items():
+            if k in dst_items:
+                name = v[DataLabel.name]
+                path_with_namespace = v[DataLabel.path_with_namespace]
+                if not path_with_namespace.endswith(name):
+                    raise Exception(f'{path_with_namespace} not endswith {name}!')
+
+                relative_path = path_with_namespace[:-len(name)]
+                prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
+                root_path = file_util.normalpath(os.path.join(prj_path, name))
+                code_url = v[DataLabel.ssh_url_to_repo]
+                self.checkout(prj_path, name, code_url)
+
+                dst_item = dst_items[k]
+                rtn = self.pull_all(root_path)
+                if not rtn:
+                    continue
+
+                dst_url = dst_item[DataLabel.ssh_url_to_repo]
+                rtn = self.update_remote_url(root_path, dst_url)
+                if not rtn:
+                    continue
+
+                self.push_all_to_remote(root_path)
+            else:
+                other_info[k] = v
+
+        for k, v in dst_items.items():
+            if k not in src_items:
+                other_info[k] = v
+
+        print('need manual operation items:')
+        pprint.pprint(other_info)
+
+    def checkout(self, prj_path, name, code_url):
+        if not os.path.isdir(prj_path):
+            os.makedirs(prj_path)
+            git.clone(code_url, prj_path)
+        else:
+            git_root = os.path.join(prj_path, name)
+            is_exists = False
+            if os.path.isdir(git_root):
+                is_exists = git.is_repository(git_root)
+            
+            if is_exists:
+                self.update_remote_url(git_root, code_url)
+                git.revert_submodules(git_root)
+                git.revert(git_root)
+            else:
+                if os.path.isdir(git_root):
+                    shutil.rmtree(git_root, ignore_errors=True)
+                git.clone(code_url, prj_path)
+
+    def pull_all(self, root_path):
+        try:
+            cmd_str = 'git pull --all'
+            print(f'in {root_path} excute "{cmd_str}"')
+            exec_cmd.run_cmd_for_code_in_specified_dir(root_path, cmd_str)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(e)
+            return False
+
+    def update_remote_url(self, root_path, dst_url):
+        try:
+            rm_cmd_str = 'git remote rm origin'
+            print(f'in {root_path} excute "{rm_cmd_str}"')
+            exec_cmd.run_cmd_for_code_in_specified_dir(root_path, rm_cmd_str)
+
+            add_cmd_str = f'git remote add origin {dst_url}'
+            print(f'in {root_path} excute "{add_cmd_str}"')
+            exec_cmd.run_cmd_for_code_in_specified_dir(root_path, add_cmd_str)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(e)
+            return False
+
+    def push_all_to_remote(self, root_path):
+        try:
+            cmd_str = f'git push --all origin'
+            print(f'in {root_path} excute "{cmd_str}"')
+            exec_cmd.run_cmd_for_code_in_specified_dir(root_path, cmd_str)
+            return True
+        except subprocess.CalledProcessError as e:
+            print(e)
+            return False
 
     def get_projects_sync_item(self, target, token, api_ver=ApiLabel.v4):
         results = dict()
         if api_ver == ApiLabel.v3:
             src_items = self.get_projects_v3(target, token)
             for src_item in src_items:
-                results[src_item[DataLabel.id]] = src_item[DataLabel.ssh_url_to_repo]
+                item = dict()
+                item[DataLabel.id] = src_item[DataLabel.id]
+                item[DataLabel.name] = src_item[DataLabel.name]
+                item[DataLabel.ssh_url_to_repo] = src_item[DataLabel.ssh_url_to_repo]
+                item[DataLabel.path_with_namespace] = src_item[DataLabel.path_with_namespace]
+                results[src_item[DataLabel.id]] = item
         elif api_ver == ApiLabel.v4:
             src_items = self.get_projects_v4(target, token)
             for src_item in src_items:
-                results[src_item.id] = src_item.ssh_url_to_repo
+                item = dict()
+                item[DataLabel.id] = src_item.id
+                item[DataLabel.name] = src_item.name
+                item[DataLabel.ssh_url_to_repo] = src_item.ssh_url_to_repo
+                item[DataLabel.path_with_namespace] = src_item.path_with_namespace
+                results[src_item.id] = item
 
-        print(results)
+        # print(results)
         return results
 
     def get_projects_v3(self, target, token):
@@ -98,6 +201,7 @@ def get_args(src_args=None):
     parser.add_argument('src_token', metavar='src_token', help='source gitlab server token')
     parser.add_argument('dst', metavar='src', help='destination gitlab server')
     parser.add_argument('dst_token', metavar='src', help='destination gitlab server token')
+    parser.add_argument('git_root', metavar='git_root', help='git root directory')
     parser.add_argument('--srcapi', metavar='src_api', dest='src_api', type=str, default=ApiLabel.v4,
                         choices=[ApiLabel.v3, ApiLabel.v4],
                         help=f'{ApiLabel.v3}: gitlab API V3; {ApiLabel.v4}: gitlab API V4;')
