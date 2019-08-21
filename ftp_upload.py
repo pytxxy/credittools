@@ -36,8 +36,9 @@ class SFTPConfigFile:
 def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_root_tag='txxy',
                    local_dir_path='', mobile_os='', target_file_name='', source_file_name=''):
     """
+        :param sftp_root_tag:
         :param sftp_config_path: sftp 配置文件路径
-        :param sftp_source_path_tag 默认txxy
+        :param sftp_root_tag 默认txxy
         :param ver_name_code: 版本号和构建版本 ex: 3.4.6beta_t_01
         :param ver_env: 构建环境
         :param svn_version: svn 版本号 或者 git 版本号
@@ -80,7 +81,7 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_r
                     ver_name = name_code_group[0]
                 else:
                     ver_name = ver_name_code
-            remote_root_dir =  sftp_config_data[_ROOT_SFTP_PATH_FLAG]
+            remote_root_dir = sftp_config_data[_ROOT_SFTP_PATH_FLAG]
             remote_dir = os.path.join(remote_root_dir[sftp_root_tag], ver_name, detail_env[ver_env])
             remote_dir = file_util.normal_unix_path(remote_dir)
 
