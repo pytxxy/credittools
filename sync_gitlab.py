@@ -26,6 +26,7 @@ class ApiLabel:
 class DataLabel:
     id = 'id'
     name = 'name'
+    path = 'path'
     ssh_url_to_repo = 'ssh_url_to_repo'
     path_with_namespace = 'path_with_namespace'
 
@@ -42,25 +43,29 @@ class ProcessManager:
         other_info = dict()
         for k, v in src_items.items():
             if k in dst_items:
-                name = v[DataLabel.name]
+                path = v[DataLabel.path]
                 path_with_namespace = v[DataLabel.path_with_namespace]
-                if not path_with_namespace.endswith(name):
-                    raise Exception(f'{path_with_namespace} not endswith {name}!')
+                if not path_with_namespace.endswith(path):
+                    print(f'{path_with_namespace} not endswith {path}!')
+                    other_info[k] = v
+                    continue
 
-                relative_path = path_with_namespace[:-len(name)]
+                relative_path = path_with_namespace[:-len(path)]
                 prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
-                root_path = file_util.normalpath(os.path.join(prj_path, name))
+                root_path = file_util.normalpath(os.path.join(prj_path, path))
                 code_url = v[DataLabel.ssh_url_to_repo]
-                self.checkout(prj_path, name, code_url)
+                self.checkout(prj_path, path, code_url)
 
                 dst_item = dst_items[k]
                 rtn = self.pull_all(root_path)
                 if not rtn:
+                    other_info[k] = v
                     continue
 
                 dst_url = dst_item[DataLabel.ssh_url_to_repo]
                 rtn = self.update_remote_url(root_path, dst_url)
                 if not rtn:
+                    other_info[k] = v
                     continue
 
                 self.push_all_to_remote(root_path)
@@ -74,24 +79,15 @@ class ProcessManager:
         print('need manual operation items:')
         pprint.pprint(other_info)
 
-    def checkout(self, prj_path, name, code_url):
+    def checkout(self, prj_path, path, code_url):
         if not os.path.isdir(prj_path):
             os.makedirs(prj_path)
-            git.clone(code_url, prj_path)
         else:
-            git_root = os.path.join(prj_path, name)
-            is_exists = False
+            git_root = os.path.join(prj_path, path)
             if os.path.isdir(git_root):
-                is_exists = git.is_repository(git_root)
+                shutil.rmtree(git_root, ignore_errors=False)
             
-            if is_exists:
-                self.update_remote_url(git_root, code_url)
-                git.revert_submodules(git_root)
-                git.revert(git_root)
-            else:
-                if os.path.isdir(git_root):
-                    shutil.rmtree(git_root, ignore_errors=True)
-                git.clone(code_url, prj_path)
+        git.clone(code_url, prj_path)
 
     def pull_all(self, root_path):
         try:
@@ -135,6 +131,7 @@ class ProcessManager:
                 item = dict()
                 item[DataLabel.id] = src_item[DataLabel.id]
                 item[DataLabel.name] = src_item[DataLabel.name]
+                item[DataLabel.path] = src_item[DataLabel.path]
                 item[DataLabel.ssh_url_to_repo] = src_item[DataLabel.ssh_url_to_repo]
                 item[DataLabel.path_with_namespace] = src_item[DataLabel.path_with_namespace]
                 results[src_item[DataLabel.id]] = item
@@ -144,6 +141,7 @@ class ProcessManager:
                 item = dict()
                 item[DataLabel.id] = src_item.id
                 item[DataLabel.name] = src_item.name
+                item[DataLabel.path] = src_item.path
                 item[DataLabel.ssh_url_to_repo] = src_item.ssh_url_to_repo
                 item[DataLabel.path_with_namespace] = src_item.path_with_namespace
                 results[src_item.id] = item
