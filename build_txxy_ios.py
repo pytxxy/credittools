@@ -4,7 +4,7 @@ import time
 import argparse
 import creditutils.file_util as myfile
 import filecmp
-import creditutils.build_base_ios as build_base
+import build_base_ios as build_base
 import creditutils.str_util as str_utils
 import creditutils.exec_cmd as exec_cmd
 from datetime import datetime
@@ -38,7 +38,7 @@ class BuildManager(build_base.BuildManager):
         os.system(cmd_str)
         
         # 更新版本名称及编译编号
-        info_plist_path = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INFO_PLIST_FLAG]
+        info_plist_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INFO_PLIST_FLAG]
         info_plist_path = myfile.normalpath(info_plist_path)
         
         build_base.update_build_no(info_plist_path, self.ver_code)
@@ -59,18 +59,7 @@ class BuildManager(build_base.BuildManager):
 
         # 更新api版本号
         build_base.update_plist_item(info_plist_path, 'TxxyVersion', self.api_ver)
-        # 更新OCR授权文件
-        # target = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.OCR_CER_FLAG][BuildConfigParser.TARGET_FLAG]
-        # target = myfile.normalize_path(target)
-        # source = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.OCR_CER_FLAG][self.ver_type]
-        # source = myfile.normalize_path(source)
-        # if not filecmp.cmp(source, target, shallow=False):
-        #     myfile.replace_file(source, target)
-        #     str_info = 'replace ocr certificate with {} type.'.format(self.ver_type)
-        #     print(str_info)
-        # else:
-        #     str_info = 'ramain ocr certificate with {} type.'.format(self.ver_type)
-        #     print(str_info)
+
         
 def main(args):
     manager = BuildManager(args)
@@ -92,7 +81,7 @@ def get_args(src_args=None):
     parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, choices=['dev', 'test', 'test2', 'pre', 'pregray', 'pro', 'gray', 'flight'], help='dev: develop environment; test: test environment; test2: test2 environment; pre: pre-release environment; pregray: pre-release gray environment;  pro: production environment; gray: gray environment; flight: Testflight;')
     parser.add_argument('--vertype', metavar='ver_type', dest='ver_type', type=str, choices=['e', 'p'], help='e: enterprise; p: personal;')
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', help='api version code')
-    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, choices=['txxy','xycx'], help='app code name')
+    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy','xycx'], help='app code name')
     
     parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
     parser.add_argument('--svnpwd', metavar='svn_pwd', dest='svn_pwd', help='subversion password')

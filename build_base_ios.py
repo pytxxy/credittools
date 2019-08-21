@@ -114,27 +114,27 @@ class BuildManager:
         configParser = BuildConfigParser(self.base_config)
         configParser.parse()
         self.ori_build_config = configParser.get_config()
-
+        self.app_build_cofig = self.ori_build_config[self.app_code]
         # project目录
-        ori_project_path = self.work_path + os.sep + self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
+        ori_project_path = self.work_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
             BuildConfigParser.PRJ_PATH_FLAG] + os.sep + 'master'
         if self.branch:
-            ori_project_path = self.work_path + os.sep + self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
+            ori_project_path = self.work_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
                 BuildConfigParser.PRJ_PATH_FLAG] + os.sep + self.branch
         self.project_path = myfile.normalpath(ori_project_path)
 
         # 代码扫描脚本目录
-        self.is_open_converage = False
-        env = self._get_detail_env(self.ver_env)
-        if BuildConfigParser.COVERAGE_FLAG in self.ori_build_config:
-            coverage_list_dict = self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][BuildConfigParser.COMPLIE_FLAG]
-            if env in coverage_list_dict:
-                if coverage_list_dict[env].lower() == str('true'):
-                    self.is_open_converage = True
-        if self.is_open_converage:
-            coverage_shell_path = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][
-                BuildConfigParser.COVERRAGE_SHELL_PATH]
-            self.coverage_shell_path = myfile.normalpath(coverage_shell_path)
+        # self.is_open_converage = False
+        # env = self._get_detail_env(self.ver_env)
+        # if BuildConfigParser.COVERAGE_FLAG in self.ori_build_config:
+        #     coverage_list_dict = self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][BuildConfigParser.COMPLIE_FLAG]
+        #     if env in coverage_list_dict:
+        #         if coverage_list_dict[env].lower() == str('true'):
+        #             self.is_open_converage = True
+        # if self.is_open_converage:
+        #     coverage_shell_path = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][
+        #         BuildConfigParser.COVERRAGE_SHELL_PATH]
+        #     self.coverage_shell_path = myfile.normalpath(coverage_shell_path)
 
     def _get_detail_env(self, ver_env):
         env_list_dict = self.ori_build_config[BuildConfigParser.ENV_LIST_FLAG]
@@ -155,8 +155,8 @@ class BuildManager:
         output_name_flag = 'output_name'
         export_options_flag = 'export_options'
 
-        if scheme_flag in self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG]:
-            params[scheme_flag] = self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][scheme_flag]
+        if scheme_flag in self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]:
+            params[scheme_flag] = self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][scheme_flag]
 
         params[configuration_flag] = self.ori_build_config[BuildConfigParser.ENV_FLAG][self.ver_env][self.ver_type]
         params[export_method_flag] = self.ori_build_config[BuildConfigParser.EXPORT_FLAG][self.ver_type][self.ver_env]
@@ -164,14 +164,14 @@ class BuildManager:
         # 判断当前项目是工程集，还是单个工程，再配置相应的参数
         curr_prj_flag = None
         for prj_item in [workspace_flag, project_flag]:
-            if prj_item in self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG]:
+            if prj_item in self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]:
                 curr_prj_flag = prj_item
                 break
 
         if not curr_prj_flag:
             raise Exception('Error build parameter!')
 
-        params[curr_prj_flag] = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
+        params[curr_prj_flag] = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
             curr_prj_flag]
         params[curr_prj_flag] = myfile.normalpath(params[curr_prj_flag])
 
@@ -181,7 +181,7 @@ class BuildManager:
         curr_time = time.localtime()
         time_str = time.strftime('%Y%m%d_%H%M%S', curr_time)
         params[output_directory_flag] = self.work_path + os.sep + \
-                                        self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
+                                        self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
                                             BuildConfigParser.TARGET_PATH_FLAG] + os.sep + self.ver_env + os.sep + time_str
         params[output_directory_flag] = myfile.normalpath(params[output_directory_flag])
         self.output_directory = params[output_directory_flag]
@@ -201,9 +201,11 @@ class BuildManager:
         self.ipa_name = params[output_name_flag]
 
         # 指定证书名称
-        cert_config_dirs = ['config', 'base', 'common_env.plist']
+        common_plist_filename = "common_env_{}.plist".format(self.app_code)
+        testfligth_plist_filename = "testFlight_{}.plist".format(self.app_code)
+        cert_config_dirs = ['config', 'base', common_plist_filename]
         if self.ver_env == 'flight':
-            cert_config_dirs = ['config', 'base', 'testFlight.plist']
+            cert_config_dirs = ['config', 'base', testfligth_plist_filename]
         cert_config = os.sep.join(cert_config_dirs)
         cert_config_path = self.work_path + os.sep + cert_config
         params[export_options_flag] = cert_config_path
@@ -249,7 +251,7 @@ class BuildManager:
 
         # 进行代码更新操作
         if self.to_update:
-            code_url = self.ori_build_config[BuildConfigParser.CODE_URL_FLAG]
+            code_url = self.app_build_cofig[BuildConfigParser.CODE_URL_FLAG]
             if self.use_git:
                 git.checkout_or_update(self.project_path, code_url, self.code_ver, self.branch)
             else:
@@ -298,35 +300,35 @@ class BuildManager:
                 raise Exception(str_info)
 
             # 将代码扫描文件复制到打包文件夹下面
-            if self.to_upload_sftp and self.is_open_converage:
-                file_dir_path = ''
-                current_arch = ''
-                pattern = re.compile('export .+=.+$')
-                for line in open(self.coverage_shell_path):
-                    match = pattern.match(line)
-                    if match:
-                        export_list = line.split('export ')
-                        path_list = export_list[1].split('=')
-                        if path_list[0] == 'OBJECT_FILE_DIR_normal':
-                            file_dir_path = eval(path_list[1])
-                        elif path_list[0] == 'CURRENT_ARCH':
-                            current_arch = eval(path_list[1])
-                gcno_file_path = file_dir_path + os.sep + current_arch
-                self.gcno_file_path = myfile.normalpath(gcno_file_path)
-
-                temp_gcno_path = self.output_directory + os.sep + 'gcno'
-                temp_gcno_path = myfile.normalpath(temp_gcno_path)
-
-                taget_zip_path = self.output_directory + os.sep + 'gcno.zip'
-                shutil.copytree(self.gcno_file_path, temp_gcno_path)
-                print('Archiving *.gcno file')
-                myzip.zip_dir(temp_gcno_path, taget_zip_path)
-                print('Archiving Finish')
-                shutil.rmtree(temp_gcno_path)
-
-                # 复制env.sh文件到打包文件夹下面
-                target_env_shell_path = self.output_directory + os.sep + 'env.sh'
-                shutil.copyfile(self.coverage_shell_path, target_env_shell_path)
+            # if self.to_upload_sftp and self.is_open_converage:
+            #     file_dir_path = ''
+            #     current_arch = ''
+            #     pattern = re.compile('export .+=.+$')
+            #     for line in open(self.coverage_shell_path):
+            #         match = pattern.match(line)
+            #         if match:
+            #             export_list = line.split('export ')
+            #             path_list = export_list[1].split('=')
+            #             if path_list[0] == 'OBJECT_FILE_DIR_normal':
+            #                 file_dir_path = eval(path_list[1])
+            #             elif path_list[0] == 'CURRENT_ARCH':
+            #                 current_arch = eval(path_list[1])
+            #     gcno_file_path = file_dir_path + os.sep + current_arch
+            #     self.gcno_file_path = myfile.normalpath(gcno_file_path)
+            #
+            #     temp_gcno_path = self.output_directory + os.sep + 'gcno'
+            #     temp_gcno_path = myfile.normalpath(temp_gcno_path)
+            #
+            #     taget_zip_path = self.output_directory + os.sep + 'gcno.zip'
+            #     shutil.copytree(self.gcno_file_path, temp_gcno_path)
+            #     print('Archiving *.gcno file')
+            #     myzip.zip_dir(temp_gcno_path, taget_zip_path)
+            #     print('Archiving Finish')
+            #     shutil.rmtree(temp_gcno_path)
+            #
+            #     # 复制env.sh文件到打包文件夹下面
+            #     target_env_shell_path = self.output_directory + os.sep + 'env.sh'
+            #     shutil.copyfile(self.coverage_shell_path, target_env_shell_path)
 
             # 将*.ipa包上传到sftp服务器
             if self.to_upload_sftp:
@@ -353,7 +355,7 @@ class BuildManager:
 
     def pre_build(self):
         # 更新版本名称及编译编号
-        info_plist_path = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
+        info_plist_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
             BuildConfigParser.INFO_PLIST_FLAG]
         info_plist_path = myfile.normalpath(info_plist_path)
 
@@ -361,18 +363,18 @@ class BuildManager:
         update_version_name(info_plist_path, self.ver_name)
 
         # 更新OCR授权文件
-        target = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.OCR_CER_FLAG][
-            BuildConfigParser.TARGET_FLAG]
-        target = myfile.normalpath(target)
-        source = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.OCR_CER_FLAG][self.ver_type]
-        source = myfile.normalpath(source)
-        if not filecmp.cmp(source, target, shallow=False):
-            myfile.replace_file(source, target)
-            str_info = 'replace ocr certificate with {} type.'.format(self.ver_type)
-            print(str_info)
-        else:
-            str_info = 'ramain ocr certificate with {} type.'.format(self.ver_type)
-            print(str_info)
+        # target = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.OCR_CER_FLAG][
+        #     BuildConfigParser.TARGET_FLAG]
+        # target = myfile.normalpath(target)
+        # source = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.OCR_CER_FLAG][self.ver_type]
+        # source = myfile.normalpath(source)
+        # if not filecmp.cmp(source, target, shallow=False):
+        #     myfile.replace_file(source, target)
+        #     str_info = 'replace ocr certificate with {} type.'.format(self.ver_type)
+        #     print(str_info)
+        # else:
+        #     str_info = 'ramain ocr certificate with {} type.'.format(self.ver_type)
+        #     print(str_info)
 
 
 def main(args):
