@@ -38,6 +38,31 @@ class ProcessManager:
         #         pprint.pprint(vars(self))
 
     def process(self):
+        if self.backup_only:
+            self.backup_project()
+        else:
+            self.sync_project()
+
+    def backup_project(self):
+        src_items = self.get_projects_sync_item(self.src, self.src_token, self.src_api)
+        other_info = dict()
+        for k, v in src_items.items():
+            path = v[DataLabel.path]
+            path_with_namespace = v[DataLabel.path_with_namespace]
+            if not path_with_namespace.endswith(path):
+                print(f'{path_with_namespace} not endswith {path}!')
+                other_info[k] = v
+                continue
+
+            relative_path = path_with_namespace[:-len(path)]
+            prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
+            code_url = v[DataLabel.ssh_url_to_repo]
+            self.checkout(prj_path, path, code_url)
+
+        print('need manual operation items:')
+        pprint.pprint(other_info)
+
+    def sync_project(self):
         src_items = self.get_projects_sync_item(self.src, self.src_token, self.src_api)
         dst_items = self.get_projects_sync_item(self.dst, self.dst_token, self.dst_api)
         other_info = dict()
@@ -197,8 +222,8 @@ def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='check uploaded file consistency')
     parser.add_argument('src', metavar='src', help='source gitlab server')
     parser.add_argument('src_token', metavar='src_token', help='source gitlab server token')
-    parser.add_argument('dst', metavar='src', help='destination gitlab server')
-    parser.add_argument('dst_token', metavar='src', help='destination gitlab server token')
+    parser.add_argument('dst', metavar='dst', help='destination gitlab server')
+    parser.add_argument('dst_token', metavar='dst_token', help='destination gitlab server token')
     parser.add_argument('git_root', metavar='git_root', help='git root directory')
     parser.add_argument('--srcapi', metavar='src_api', dest='src_api', type=str, default=ApiLabel.v4,
                         choices=[ApiLabel.v3, ApiLabel.v4],
@@ -206,8 +231,10 @@ def get_args(src_args=None):
     parser.add_argument('--dstapi', metavar='dst_api', dest='dst_api', type=str, default=ApiLabel.v4,
                         choices=[ApiLabel.v3, ApiLabel.v4],
                         help=f'{ApiLabel.v3}: gitlab API V3; {ApiLabel.v4}: gitlab API V4;')
+    parser.add_argument('--backup', dest='backup_only', action='store_true', default=False,
+                        help='indicate just backup only')
 
-    #     parser.print_help()
+    # parser.print_help()
 
     return parser.parse_args(src_args)
 
