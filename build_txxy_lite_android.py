@@ -187,7 +187,7 @@ def make_apk_with_gradle(work_path, cmd_str, pre_cmd=BuildCmd.pre_cmd):
 
     try:
         if pre_cmd:
-            pre_build_cmd = os.path.join(os.path.dirname(work_path), pre_cmd)
+            pre_build_cmd = _system_pre + os.path.join(os.path.dirname(work_path), pre_cmd)
             print(pre_build_cmd)
             subprocess.check_call(pre_build_cmd, shell=True)
 
