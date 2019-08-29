@@ -4,6 +4,7 @@ import os
 import time
 import re
 from enum import IntEnum
+import platform
 
 import ftp_upload
 import creditutils.apk_builder_util as apk_builder
@@ -24,6 +25,13 @@ import creditutils.apk_util as apk_util
 
 BuilderVer = IntEnum('BuilderVer', ('JavaLast', 'Kotlin01'))
 
+_system = platform.system()
+if _system == 'Windows':
+    _system_suffix = '.bat'
+elif _system == 'Linux':
+    _system_suffix = ''
+else:
+    _system_suffix = ''
 
 class BuilderLabel:
     PRJ_ROOT_FLAG = 'prj_root'
@@ -87,16 +95,17 @@ class BuilderLabel:
 
 
 class BuildCmd:
-    pre_cmd = 'gradlew.bat --configure-on-demand clean'
+    exec_name = f'gradlew{_system_suffix}'
+    pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
                'coverage_enabled', 'httpdns', 'demo_label']
 
-    cmd_format = 'gradlew.bat --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+    cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} ' \
                       '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
 
-    cmd_format_without_api_ver = 'gradlew.bat --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+    cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} ' \
                       '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
 
