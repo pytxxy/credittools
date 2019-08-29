@@ -19,10 +19,12 @@ class BuildManager(build_base.BuildManager):
             # 执行"pod install"下载新增的库配置,在执行pod update更新相关的库
             pod_path = self.project_path + os.sep + 'pytxxy/Projects/pytxxy_ios'
             pod_path = myfile.normalpath(pod_path)
-            cmd_str = 'pod install'
-            cmd_update_str = 'pod update'
+            cmd_update_local_pod = 'pod repo update PYPodSpec'
+            cmd_str = 'pod install --no-repo-update'
+            cmd_update_str = 'pod update --no-repo-update'
             pods_path = pod_path + os.sep + 'Pods'
             pods_path = myfile.normalpath(pods_path)
+            exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_local_pod, print_flag=True)
             if os.path.exists(pods_path):
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
             else:
