@@ -27,10 +27,13 @@ BuilderVer = IntEnum('BuilderVer', ('JavaLast', 'Kotlin01'))
 
 _system = platform.system()
 if _system == 'Windows':
+    _system_pre = ''
     _system_suffix = '.bat'
 elif _system == 'Linux':
+    _system_pre = 'bash '
     _system_suffix = ''
 else:
+    _system_pre = 'bash '
     _system_suffix = ''
 
 class BuilderLabel:
@@ -188,7 +191,7 @@ def make_apk_with_gradle(work_path, cmd_str, pre_cmd=BuildCmd.pre_cmd):
             print(pre_build_cmd)
             subprocess.check_call(pre_build_cmd, shell=True)
 
-        build_cmd = os.path.join(os.path.dirname(work_path), cmd_str)
+        build_cmd = _system_pre + os.path.join(os.path.dirname(work_path), cmd_str)
         print(build_cmd)
         subprocess.check_call(build_cmd, shell=True)
         # os.system(build_cmd)
