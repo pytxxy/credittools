@@ -20,7 +20,7 @@ class BuildManager(build_base.BuildManager):
             pod_path = self.pods_path
             pod_path = myfile.normalpath(pod_path)
             cmd_update_local_pod = 'pod repo update PYPodSpec'
-            cmd_str = 'pod install --no-repo-update'
+            cmd_str = 'pod install'
             cmd_update_str = 'pod update --no-repo-update'
             pods_path = pod_path + os.sep + 'Pods'
             pods_path = myfile.normalpath(pods_path)
