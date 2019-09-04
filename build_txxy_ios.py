@@ -31,7 +31,7 @@ class BuildManager(build_base.BuildManager):
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
             
         # 先恢复正常的编译配置
-        reinit_config_script_path = self.project_path + os.sep + 'pytxxy/Projects/pytxxy_ios/init.rb'
+        reinit_config_script_path = self.init_ruby_path
         reinit_config_script_path = myfile.normalpath(reinit_config_script_path)
         # 执行初始化恢复操作
         str_format = 'ruby {}'
@@ -40,7 +40,7 @@ class BuildManager(build_base.BuildManager):
         os.system(cmd_str)
         
         # 更新版本名称及编译编号
-        info_plist_path = self.init_ruby_path
+        info_plist_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INFO_PLIST_FLAG]
         info_plist_path = myfile.normalpath(info_plist_path)
         
         build_base.update_build_no(info_plist_path, self.ver_code)
