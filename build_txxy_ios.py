@@ -17,7 +17,7 @@ class BuildManager(build_base.BuildManager):
         # 在需要更新代码条件下先进行pod update更新操作
         if self.to_update and self.use_git:
             # 执行"pod install"下载新增的库配置,在执行pod update更新相关的库
-            pod_path = self.project_path + os.sep + 'pytxxy/Projects/pytxxy_ios'
+            pod_path = self.pods_path
             pod_path = myfile.normalpath(pod_path)
             cmd_update_local_pod = 'pod repo update PYPodSpec'
             cmd_str = 'pod install --no-repo-update'
@@ -40,7 +40,7 @@ class BuildManager(build_base.BuildManager):
         os.system(cmd_str)
         
         # 更新版本名称及编译编号
-        info_plist_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INFO_PLIST_FLAG]
+        info_plist_path = self.init_ruby_path
         info_plist_path = myfile.normalpath(info_plist_path)
         
         build_base.update_build_no(info_plist_path, self.ver_code)
