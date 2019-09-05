@@ -15,6 +15,8 @@ import creditutils.git_util as git
 # import filecmp
 import xmltodict
 import creditutils.trivial_util as utility
+import platform
+import creditutils.exec_cmd as exec_cmd
 
 # 标识打包类型，是单独打包，还是一次性完成所有打包
 _PACK_TYPE_ALL = 0
@@ -347,6 +349,8 @@ def process_item(src_dir, dst_dir, temp_dir, _type, ver_code, filter_folders, fi
             for list_file in child_temp_dir_arr:
                 list_file_path = temp_target_dir + os.sep + list_file
                 for root, dirs, files in os.walk(list_file_path):
+                    if folder_detail_file in list_file_path:
+                        shutil.rmtree(list_file_path)
                     if folder_detail_file in dirs:
                         shutil.rmtree(os.path.join(root, folder_detail_file))
                     for name in files:
@@ -415,6 +419,12 @@ def update_git_file(git_root, relative_file_path, new_file, msg, zip_password=No
 
     target_file = file_util.normalpath(os.path.join(git_root, relative_file_path))
     if not is_same_config(new_file, target_file, zip_password=zip_password):
+        if platform.system() == 'Darwin' and zip_password:
+            UNZIP_CMD = 'unzip -o {}'.format(new_file)
+            exec_cmd.run_cmd_with_system_in_specified_dir(os.path.dirname(new_file), UNZIP_CMD, print_flag=True)
+            os.remove(new_file)
+            ZIP_CMD = 'zip -m -r -P {} {} {}'.format(zip_password, 'config_file.zip', 'config_file')
+            exec_cmd.run_cmd_with_system_in_specified_dir(os.path.dirname(new_file), ZIP_CMD, print_flag=True)
         file_util.replace_file(new_file, target_file)
         paths = []
         paths.append(relative_file_path)
