@@ -184,7 +184,10 @@ class BuildManager:
         # 将时间格式化
         curr_time = time.localtime()
         time_str = time.strftime('%Y%m%d_%H%M%S', curr_time)
-        params[output_directory_flag] = self.work_path + os.sep + \
+        if self.output_dir:
+            params[output_directory_flag] = self.output_dir + os.sep + self.ver_env + os.sep + time_str
+        else:
+            params[output_directory_flag] = self.work_path + os.sep + \
                                         self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
                                             BuildConfigParser.TARGET_PATH_FLAG] + os.sep + self.ver_env + os.sep + time_str
         params[output_directory_flag] = myfile.normalpath(params[output_directory_flag])
