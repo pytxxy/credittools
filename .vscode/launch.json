@@ -12,10 +12,10 @@
             "console": "integratedTerminal",
             "args": [
                 "http://gitlab.app.com",
-                "M8qMVawjHsdsn89c9xxn",
+                "CYJ7P97ssR6pACMRC_aw",
                 "http://192.168.20.202",
                 "CYJ7P97ssR6pACMRC_aw",
-                "G:\\git_root",
+                "G:\\temp\\git_root",
                 "--srcapi",
                 "v3"
             ]

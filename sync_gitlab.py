@@ -13,11 +13,12 @@ import creditutils.git_util as git
 
 # 设计思路说明：
 # 1.先遍历老的gitlab库，将所有的库罗列出来；
-# 2.依次对所有老库进行如下操作：
-# (1)下载下来并更新(git pull --all)；
+# 2.依次对所有老库所有分支进行如下操作：
+# (1)下载下来指定分支并更新(git pull --all)；
 # (2)调整remote地址，分别调用“git remote rm origin” 和 “git remote add origin 你的新远程仓库地址"(如 git remote add origin git@192.168.20.202:frontend/pk.git)进行更新；
 # (3)将代码同步到新的远程，调用命令为“git push --all origin”；
 # (4)中间有任何一个库操作失败，则记录下来，继续对下一个进行操作；
+# 3.特别说明，后续将只支持v4版本gitlab的同步，不再支持v3版本；（API V3 was unsupported from GitLab 9.5, released on August 22, 2017. API v3 was removed in GitLab 11.0.）
 
 class ApiLabel:
     v3 = 'v3'
@@ -44,7 +45,80 @@ class ProcessManager:
             self.sync_project()
 
     def backup_project(self):
-        src_items = self.get_projects_sync_item(self.src, self.src_token, self.src_api)
+        src_items = self.get_projects_sync_item(self.src, self.src_token)
+        other_info = dict()
+        # cnt_butt = 4
+        # cnt_index = 0
+        for k, v in src_items.items():
+            path = v.path
+            path_with_namespace = v.path_with_namespace
+            if not path_with_namespace.endswith(path):
+                print(f'{path_with_namespace} not endswith {path}!')
+                other_info[k] = v
+                continue
+
+            branches = v.branches.list()
+            for branch in branches:
+                branch_id = branch.get_id()
+                relative_path = os.path.join(path_with_namespace, branch_id)
+                prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
+                code_url = v.ssh_url_to_repo
+                self.checkout(prj_path, path, code_url, branch=branch_id)
+
+            # cnt_index += 1
+            # if cnt_index >= cnt_butt:
+            #     break
+
+        print('need manual operation items:')
+        pprint.pprint(other_info)
+
+    def sync_project(self):
+        src_items = self.get_projects_sync_item(self.src, self.src_token)
+        dst_items = self.get_projects_sync_item(self.dst, self.dst_token)
+        other_info = dict()
+        for k, v in src_items.items():
+            if k in dst_items:
+                path = v.path
+                path_with_namespace = v.path_with_namespace
+                if not path_with_namespace.endswith(path):
+                    print(f'{path_with_namespace} not endswith {path}!')
+                    other_info[k] = v
+                    continue
+
+                branches = v.branches.list()
+                for branch in branches:
+                    branch_id = branch.get_id()
+                    relative_path = os.path.join(path_with_namespace, branch_id)
+                    prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
+                    root_path = file_util.normalpath(os.path.join(prj_path, path))
+                    code_url = v.ssh_url_to_repo
+                    self.checkout(prj_path, path, code_url, branch=branch_id)
+
+                    dst_item = dst_items[k]
+                    rtn = self.pull_all(root_path)
+                    if not rtn:
+                        other_info[k] = v
+                        continue
+
+                    dst_url = dst_item.ssh_url_to_repo
+                    rtn = self.update_remote_url(root_path, dst_url)
+                    if not rtn:
+                        other_info[k] = v
+                        continue
+
+                    self.push_all_to_remote(root_path)
+            else:
+                other_info[k] = v
+
+        for k, v in dst_items.items():
+            if k not in src_items:
+                other_info[k] = v
+
+        print('need manual operation items:')
+        pprint.pprint(other_info)
+
+    def backup_project_support_v3(self):
+        src_items = self.get_projects_sync_item_support_v3(self.src, self.src_token, self.src_api)
         other_info = dict()
         for k, v in src_items.items():
             path = v[DataLabel.path]
@@ -62,9 +136,9 @@ class ProcessManager:
         print('need manual operation items:')
         pprint.pprint(other_info)
 
-    def sync_project(self):
-        src_items = self.get_projects_sync_item(self.src, self.src_token, self.src_api)
-        dst_items = self.get_projects_sync_item(self.dst, self.dst_token, self.dst_api)
+    def sync_project_support_v3(self):
+        src_items = self.get_projects_sync_item_support_v3(self.src, self.src_token, self.src_api)
+        dst_items = self.get_projects_sync_item_support_v3(self.dst, self.dst_token, self.dst_api)
         other_info = dict()
         for k, v in src_items.items():
             if k in dst_items:
@@ -104,7 +178,49 @@ class ProcessManager:
         print('need manual operation items:')
         pprint.pprint(other_info)
 
-    def checkout(self, prj_path, path, code_url):
+    def sync_project_support_v3(self):
+        src_items = self.get_projects_sync_item_support_v3(self.src, self.src_token, self.src_api)
+        dst_items = self.get_projects_sync_item_support_v3(self.dst, self.dst_token, self.dst_api)
+        other_info = dict()
+        for k, v in src_items.items():
+            if k in dst_items:
+                path = v[DataLabel.path]
+                path_with_namespace = v[DataLabel.path_with_namespace]
+                if not path_with_namespace.endswith(path):
+                    print(f'{path_with_namespace} not endswith {path}!')
+                    other_info[k] = v
+                    continue
+
+                relative_path = path_with_namespace[:-len(path)]
+                prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
+                root_path = file_util.normalpath(os.path.join(prj_path, path))
+                code_url = v[DataLabel.ssh_url_to_repo]
+                self.checkout(prj_path, path, code_url)
+
+                dst_item = dst_items[k]
+                rtn = self.pull_all(root_path)
+                if not rtn:
+                    other_info[k] = v
+                    continue
+
+                dst_url = dst_item[DataLabel.ssh_url_to_repo]
+                rtn = self.update_remote_url(root_path, dst_url)
+                if not rtn:
+                    other_info[k] = v
+                    continue
+
+                self.push_all_to_remote(root_path)
+            else:
+                other_info[k] = v
+
+        for k, v in dst_items.items():
+            if k not in src_items:
+                other_info[k] = v
+
+        print('need manual operation items:')
+        pprint.pprint(other_info)
+
+    def checkout(self, prj_path, path, code_url, branch=None):
         if not os.path.isdir(prj_path):
             os.makedirs(prj_path)
         else:
@@ -112,7 +228,7 @@ class ProcessManager:
             if os.path.isdir(git_root):
                 shutil.rmtree(git_root, ignore_errors=False)
             
-        git.clone(code_url, prj_path)
+        git.clone(code_url, prj_path, branch=branch)
 
     def pull_all(self, root_path):
         try:
@@ -148,7 +264,16 @@ class ProcessManager:
             print(e)
             return False
 
-    def get_projects_sync_item(self, target, token, api_ver=ApiLabel.v4):
+    def get_projects_sync_item(self, target, token):
+        results = dict()
+        src_items = self.get_projects_v4(target, token)
+        for src_item in src_items:
+            results[src_item.id] = src_item
+        
+        # print(results)
+        return results
+
+    def get_projects_sync_item_support_v3(self, target, token, api_ver=ApiLabel.v4):
         results = dict()
         if api_ver == ApiLabel.v3:
             src_items = self.get_projects_v3(target, token)
