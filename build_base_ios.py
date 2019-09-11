@@ -72,6 +72,8 @@ class BuildConfigParser:
     COVERAGE_FLAG = 'coverage'
     TINGYUN_KEY_FLAG = 'tingyun_appkey'
     COMPLIE_FLAG = 'complie'
+    PODS_PATH = 'pods_path'
+    INIT_RUBY_PAYH = 'init_ruby_path'
 
     def __init__(self, config_path):
         self.config_path = config_path
@@ -122,6 +124,8 @@ class BuildManager:
             ori_project_path = self.work_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
                 BuildConfigParser.PRJ_PATH_FLAG] + os.sep + self.branch
         self.project_path = myfile.normalpath(ori_project_path)
+        self.pods_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.PODS_PATH]
+        self.init_ruby_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INIT_RUBY_PAYH]
 
         # 代码扫描脚本目录
         # self.is_open_converage = False
@@ -180,7 +184,10 @@ class BuildManager:
         # 将时间格式化
         curr_time = time.localtime()
         time_str = time.strftime('%Y%m%d_%H%M%S', curr_time)
-        params[output_directory_flag] = self.work_path + os.sep + \
+        if self.output_dir:
+            params[output_directory_flag] = self.output_dir + os.sep + self.ver_env + os.sep + time_str
+        else:
+            params[output_directory_flag] = self.work_path + os.sep + \
                                         self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][
                                             BuildConfigParser.TARGET_PATH_FLAG] + os.sep + self.ver_env + os.sep + time_str
         params[output_directory_flag] = myfile.normalpath(params[output_directory_flag])

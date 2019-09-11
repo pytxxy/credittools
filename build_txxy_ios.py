@@ -17,19 +17,21 @@ class BuildManager(build_base.BuildManager):
         # 在需要更新代码条件下先进行pod update更新操作
         if self.to_update and self.use_git:
             # 执行"pod install"下载新增的库配置,在执行pod update更新相关的库
-            pod_path = self.project_path + os.sep + 'pytxxy/Projects/pytxxy_ios'
+            pod_path = self.pods_path
             pod_path = myfile.normalpath(pod_path)
+            cmd_update_local_pod = 'pod repo update PYPodSpec'
             cmd_str = 'pod install'
-            cmd_update_str = 'pod update'
+            cmd_update_str = 'pod update --no-repo-update'
             pods_path = pod_path + os.sep + 'Pods'
             pods_path = myfile.normalpath(pods_path)
+            exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_local_pod, print_flag=True)
             if os.path.exists(pods_path):
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
             else:
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
             
         # 先恢复正常的编译配置
-        reinit_config_script_path = self.project_path + os.sep + 'pytxxy/Projects/pytxxy_ios/init.rb'
+        reinit_config_script_path = self.init_ruby_path
         reinit_config_script_path = myfile.normalpath(reinit_config_script_path)
         # 执行初始化恢复操作
         str_format = 'ruby {}'
@@ -82,6 +84,7 @@ def get_args(src_args=None):
     parser.add_argument('--vertype', metavar='ver_type', dest='ver_type', type=str, choices=['e', 'p'], help='e: enterprise; p: personal;')
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', help='api version code')
     parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy','xycx'], help='app code name')
+    parser.add_argument('--output', metavar='output_dir', dest='output_dir', help='ipa output directory')
     
     parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
     parser.add_argument('--svnpwd', metavar='svn_pwd', dest='svn_pwd', help='subversion password')
