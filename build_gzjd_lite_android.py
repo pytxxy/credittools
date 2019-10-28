@@ -643,7 +643,7 @@ class BuildManager:
         print('target_name: ', target_name)
         print('source_name:', source_name)
 
-        ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, self.app_code,
+        ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, 'gzjd',
                                   to_upload_path, 'Android', target_name, source_name)
 
 
