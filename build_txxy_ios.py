@@ -12,7 +12,7 @@ from datetime import datetime
 class BuildConfigParser(build_base.BuildConfigParser):
     pass
 
-class BuildManager(build_base.BuildManager):   
+class BuildManager(build_base.BuildManager):
     def pre_build(self):
         # 在需要更新代码条件下先进行pod update更新操作
         if self.to_update and self.use_git:
@@ -83,7 +83,7 @@ def get_args(src_args=None):
     parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, choices=['dev', 'test', 'test2', 'pre', 'pregray', 'pro', 'gray', 'flight'], help='dev: develop environment; test: test environment; test2: test2 environment; pre: pre-release environment; pregray: pre-release gray environment;  pro: production environment; gray: gray environment; flight: Testflight;')
     parser.add_argument('--vertype', metavar='ver_type', dest='ver_type', type=str, choices=['e', 'p'], help='e: enterprise; p: personal;')
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', help='api version code')
-    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy','xycx'], help='app code name')
+    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy','xycx', 'gzjd'], help='app code name')
     parser.add_argument('--output', metavar='output_dir', dest='output_dir', help='ipa output directory')
     
     parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
