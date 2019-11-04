@@ -337,8 +337,16 @@ class BuildManager:
             #     target_env_shell_path = self.output_directory + os.sep + 'env.sh'
             #     shutil.copyfile(self.coverage_shell_path, target_env_shell_path)
 
+
+
+
             # 将*.ipa包上传到sftp服务器
             if self.to_upload_sftp:
+
+                # 复制podfile.lock 到目标文件夹
+                pods_lock_file = self.pods_path + os.sep + 'Podfile.lock'
+                shutil.copy(pods_lock_file, self.output_directory)
+
                 # 为防止上传的东西太多，将部分文件打成zip包
                 print('Archiving data file')
                 tmp_folder = tempfile.mkdtemp()
