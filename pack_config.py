@@ -212,8 +212,13 @@ class CommitManager:
         if CommitManager._TYPE_SVN == rep_type.lower():
             self.commit_with_svn(item[CommitManager.URL_FLAG], source_path, targer_config_path)
         elif CommitManager._TYPE_GIT == rep_type.lower():
+            if self.branch:
+                branch = self.branch
+            else:
+                branch = item[CommitManager.BRANCH_FLAG]
+
             self.commit_with_git(item[CommitManager.URL_FLAG], source_path, item[CommitManager.RELATIVE_PATH_FLAG],
-                                 targer_config_path, item[CommitManager.BRANCH_FLAG], zip_password)
+                                 targer_config_path, branch, zip_password)
         else:
             raise Exception('Type {} is invalid!'.format(rep_type))
 
@@ -521,6 +526,9 @@ def get_args(src_args=None):
     parser.add_argument('-v', metavar='svn_ver', dest='svn_ver', action='store', default=None,
                         help='indicate updating to special version')
     parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default=_APP_CODE_TXXY, choices=[_APP_CODE_TXXY, _APP_CODE_XYCX], help='app code name')
+
+    # 优先使用命令行配置的git分支参数
+    parser.add_argument('--branch', metavar='branch', dest='branch', default=None, help='code branch name')
 
     src_group = parser.add_mutually_exclusive_group()
     src_group.add_argument('-s', dest='type', action='store_const', default=_PACK_TYPE_ALL, const=_PACK_TYPE_SERVER,
