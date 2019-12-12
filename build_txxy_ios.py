@@ -45,7 +45,12 @@ class BuildManager(build_base.BuildManager):
         
         build_base.update_build_no(info_plist_path, self.ver_code)
         build_base.update_version_name(info_plist_path, self.ver_name)
-        
+
+        if(self.app_code == 'txxy'):
+            notification_info_plist_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]['notification_info_plist']
+            notification_info_plist_path = myfile.normalpath(notification_info_plist_path)
+            build_base.update_build_no(notification_info_plist_path, self.ver_code)
+            build_base.update_version_name(notification_info_plist_path, self.ver_name)
         # 更新代码配置库版本信息
         code_ver_pre = 'git_'
         if not self.use_git:
