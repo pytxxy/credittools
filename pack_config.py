@@ -59,6 +59,8 @@ _UPLOAD_SUB_DIRS = {
 }
 _APP_CODE_TXXY = 'txxy'
 _APP_CODE_XYCX = 'xycx'
+_APP_CODE_PYQX = 'pyqx'
+
 
 class FileMap:
     _src_ptn_fmt = '^[\.\w\-]+({})?(\.\w+)?({}[\.\w\-]+({})?(\.\w+)?)*$'
@@ -525,7 +527,7 @@ def get_args(src_args=None):
                         help='commit configure file, path relative to work path')
     parser.add_argument('-v', metavar='svn_ver', dest='svn_ver', action='store', default=None,
                         help='indicate updating to special version')
-    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default=_APP_CODE_TXXY, choices=[_APP_CODE_TXXY, _APP_CODE_XYCX], help='app code name')
+    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default=_APP_CODE_TXXY, choices=[_APP_CODE_TXXY, _APP_CODE_XYCX, _APP_CODE_PYQX], help='app code name')
 
     # 优先使用命令行配置的git分支参数
     parser.add_argument('--branch', metavar='branch', dest='branch', default=None, help='code branch name')
