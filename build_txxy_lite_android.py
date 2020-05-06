@@ -849,8 +849,8 @@ def get_args(src_args=None):
 
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', type=str, help='network api version number')
     parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy',
-                        choices=['txxy', 'xycx', 'pyqx'],
-                        help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin;')
+                        choices=['txxy', 'xycx', 'pyqx', 'pyzx'],
+                        help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin; pyzx: peng yuan zheng xin;')
 
     parser.add_argument('--test', dest='is_test', action='store_true', default=False,
                         help='indicate just to test config')
