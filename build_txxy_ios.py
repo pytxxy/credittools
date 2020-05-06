@@ -46,7 +46,7 @@ class BuildManager(build_base.BuildManager):
         build_base.update_build_no(info_plist_path, self.ver_code)
         build_base.update_version_name(info_plist_path, self.ver_name)
 
-        if(self.app_code == 'txxy' or self.app_code == 'xycx' or self.app_code == 'pyqx'):
+        if(self.app_code != 'gzjd'):
             notification_info_plist_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]['notification_info_plist']
             notification_info_plist_path = myfile.normalpath(notification_info_plist_path)
             build_base.update_build_no(notification_info_plist_path, self.ver_code)
@@ -88,7 +88,7 @@ def get_args(src_args=None):
     parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, choices=['dev', 'test', 'test2', 'pre', 'pregray', 'pro', 'gray', 'flight'], help='dev: develop environment; test: test environment; test2: test2 environment; pre: pre-release environment; pregray: pre-release gray environment;  pro: production environment; gray: gray environment; flight: Testflight;')
     parser.add_argument('--vertype', metavar='ver_type', dest='ver_type', type=str, choices=['e', 'p'], help='e: enterprise; p: personal;')
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', help='api version code')
-    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy','xycx', 'gzjd', 'pyqx'], help='app code name')
+    parser.add_argument('--app', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy', 'xycx', 'gzjd', 'pyqx', 'pyzx'], help='app code name')
     parser.add_argument('--output', metavar='output_dir', dest='output_dir', help='ipa output directory')
     
     parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
