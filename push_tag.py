@@ -94,7 +94,7 @@ class ConfigBuildManager:
         if self.podfile_path:
             for pod_name_key in self.tag_info.keys():
                 file_data = file.read_file_content(self.podfile_path)
-                version_line_arr = re.search(r"(pod\s+\'{}\'\,\s+\'([0-9]|\.)+\')".format(pod_name_key), file_data)
+                version_line_arr = re.search(r"(pod\s+\'{}.+\'\,\s+\'([0-9]|\.)+\')".format(pod_name_key), file_data)
                 if version_line_arr:
                     pod_version_line = version_line_arr.group()
                     new_spec_version_line = re.sub(r'([0-9]\.|[0-9])+', self.tag_info[pod_name_key], pod_version_line)
