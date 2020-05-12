@@ -54,6 +54,10 @@ class ConfigBuildManager:
             if pod_name in temp_branch_dict.keys():
                 branch_name = temp_branch_dict[pod_name]
 
+            if pod_name in temp_tag_dict.keys():
+                self.tag_info[pod_name] = temp_tag_dict[pod_name]
+                break
+
             source_path = self.work_path + os.sep + pod_name
             source_path = file.normalpath(source_path)
             git.checkout_or_update(source_path, self.get_remote_url(pod_name), branch=branch_name)
@@ -77,24 +81,22 @@ class ConfigBuildManager:
                     new_tag = '.'.join(temp_tag)
                     self.change_podspec_version(new_tag, source_path)
 
-                else:
-                    # 获取远程pod库版本信息
-                    os.chdir(git_root)
-                    rtn_str = subprocess.check_output(['pod', 'search', pod_name], universal_newlines=True)
-                    version_str = re.search(r'\s+-\s+Versions:.+[PYPodSpec repo]]', rtn_str).group()
-                    is_revision_upload = False
-                    for detail_ver in version_str.split(','):
-                        if new_tags_info[1] in detail_ver.strip():
-                            is_revision_upload = True
-
-                    if not is_revision_upload:
-                        subprocess.call(['sh', 'push.sh'])
+            # 获取远程pod库版本信息
+            os.chdir(git_root)
+            rtn_str = subprocess.check_output(['pod', 'search', pod_name], universal_newlines=True)
+            version_str = re.search(r'\s+-\s+Versions:.+[PYPodSpec repo]]', rtn_str).group()
+            is_revision_upload = False
+            for detail_ver in version_str.split(','):
+                if new_tags_info[1] in detail_ver.strip():
+                    is_revision_upload = True
+            if not is_revision_upload:
+                subprocess.call(['sh', 'push.sh'])
 
             self.tag_info[pod_name] = new_tags_info[1]
         if self.podfile_path:
             for pod_name_key in self.tag_info.keys():
                 file_data = file.read_file_content(self.podfile_path)
-                version_line_arr = re.search(r"(pod\s+\'{}.+\'\,\s+\'([0-9]|\.)+\')".format(pod_name_key), file_data)
+                version_line_arr = re.search(r"(pod\s+\'({}|{}.+)\'\,\s+\'([0-9]|\.)+\')".format(pod_name_key, pod_name_key), file_data)
                 if version_line_arr:
                     pod_version_line = version_line_arr.group()
                     new_spec_version_line = re.sub(r'([0-9]\.|[0-9])+', self.tag_info[pod_name_key], pod_version_line)
@@ -105,7 +107,6 @@ class ConfigBuildManager:
             os.chdir(git_root)
             if git.has_change(git_root):
                 git.push_to_remote([self.podfile_path], '[other]: Podfile文件更新', repository=None, refspecs=None, _dir=git_root)
-
 
 
     def change_podspec_version(self, tag_version, source_path):
