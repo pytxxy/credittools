@@ -8,6 +8,7 @@ import build_base_ios as build_base
 import creditutils.str_util as str_utils
 import creditutils.exec_cmd as exec_cmd
 from datetime import datetime
+import push_tag as pod_tag
 
 class BuildConfigParser(build_base.BuildConfigParser):
     pass
@@ -16,6 +17,14 @@ class BuildManager(build_base.BuildManager):
     def pre_build(self):
         # 在需要更新代码条件下先进行pod update更新操作
         if self.to_update and self.use_git:
+
+            # pod更新提交
+            if self.to_push_pod_tag:
+                podfile_path = self.pods_path + os.sep + 'Podfile'
+                podfile_path = myfile.normalpath(podfile_path)
+                pod_tag.push_pod_tag_to_remote(self.work_path, podfile_path, ['PYCategory', 'PYLibrary', 'PYTXXYBaseModule', 'PYAccountManager', 'PYPersonIdentify'], self.branch_dict, self.tag_dict)
+
+
             # 执行"pod install"下载新增的库配置,在执行pod update更新相关的库
             pod_path = self.pods_path
             pod_path = myfile.normalpath(pod_path)
@@ -94,9 +103,13 @@ def get_args(src_args=None):
     parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
     parser.add_argument('--svnpwd', metavar='svn_pwd', dest='svn_pwd', help='subversion password')
     
-    parser.add_argument('--upload', dest= 'to_upload_sftp', action= 'store_true', default=False, help='need to upload to sftp Server;')
+    parser.add_argument('--upload', dest='to_upload_sftp', action= 'store_true', default=False, help='need to upload to sftp Server;')
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan'], help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', help='branch name')
+
+    parser.add_argument('--pushpodtag', dest='to_push_pod_tag', action= 'store_true', default=False, help='need to push pod tag;')
+    parser.add_argument('--podbranch',  metavar='branch_dict',    type=str,  dest='branch_dict',   default=[], help='pod branch name')
+    parser.add_argument('--podtag',     metavar='tag_dict',  type=str,   dest='tag_dict',   help='tag name dict eg:{pod_name:tag_name}')
     
 #     parser.print_help()
 
