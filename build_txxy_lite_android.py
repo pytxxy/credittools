@@ -59,6 +59,7 @@ class BuilderLabel:
     FILE_ITEM_FLAG = 'file_item'
     GRADLE_FLAG = 'gradle'
     ARM64_FLAG = 'arm64'
+    FOR_GOOGLE_FLAG = 'for_google'
 
     PROTECT_FLAG = 'protect'
     IP_FLAG = 'ip'
@@ -107,10 +108,10 @@ class BuildCmd:
 
     cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
-                      '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
+                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
+                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} -PBUILD_FOR_GOOGLE_PLAY={for_google} ' \
                       '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
 
     def __init__(self):
@@ -155,6 +156,7 @@ class BuildCmd:
         self.httpdns = info[BuilderLabel.ENV_FLAG][BuilderLabel.HTTPDNS_FLAG][env_mode].lower()
         self.demo_label = info[BuilderLabel.DEMO_LABEL_FLAG]
         self.is_arm64 = str(info[BuilderLabel.ARM64_FLAG]).lower()
+        self.for_google = str(info[BuilderLabel.FOR_GOOGLE_FLAG]).lower()
 
     def get_map(self):
         rtn_map = {}
@@ -629,6 +631,7 @@ class BuildManager:
             self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
         params[BuilderLabel.ARM64_FLAG] = self.is_arm64
+        params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
 
         # 获取加固配置信息
         params[BuilderLabel.PROTECT_FLAG] = self.ori_build_config[BuildConfigLabel.PROTECT_FLAG]
@@ -863,6 +866,8 @@ def get_args(src_args=None):
                         help='indicate to upload build files')
     parser.add_argument('--arm64', dest='is_arm64', action='store_true', default=False,
                         help='indicate to build with arm64')
+    parser.add_argument('--google', dest='for_google', action='store_true', default=False,
+                        help='indicate to build for google play')
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal',
                         choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
