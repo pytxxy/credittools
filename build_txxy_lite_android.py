@@ -104,7 +104,7 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
-               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64']
+               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google']
 
     cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
