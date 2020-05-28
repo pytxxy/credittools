@@ -65,9 +65,11 @@ class ConfigBuildManager:
 
             new_push_version = git.get_revision(git_root)
             new_tags_info = git.get_newest_tag_revision(git_root)
+            new_push_tag = ''
 
             # 当前仓库有没有打过tag
             if new_tags_info:
+                new_push_tag = new_tags_info[1]
                 # 最新提交的版本没有打过tag
                 if new_push_version != new_tags_info[0]:
                     new_tag = new_tags_info[1].split('.')
@@ -79,6 +81,7 @@ class ConfigBuildManager:
                         else:
                             temp_tag.append(format(tag_num))
                     new_tag = '.'.join(temp_tag)
+                    new_push_tag = new_tag
                     self.change_podspec_version(new_tag, source_path)
 
             # 获取远程pod库版本信息
@@ -87,12 +90,13 @@ class ConfigBuildManager:
             version_str = re.search(r'\s+-\s+Versions:.+[PYPodSpec repo]]', rtn_str).group()
             is_revision_upload = False
             for detail_ver in version_str.split(','):
-                if new_tags_info[1] in detail_ver.strip():
+                if new_push_tag in detail_ver.strip():
                     is_revision_upload = True
             if not is_revision_upload:
                 subprocess.call(['sh', 'push.sh'])
 
-            self.tag_info[pod_name] = new_tags_info[1]
+            self.tag_info[pod_name] = new_push_tag
+
         if self.podfile_path:
             for pod_name_key in self.tag_info.keys():
                 file_data = file.read_file_content(self.podfile_path)
