@@ -71,6 +71,7 @@ class ConfigBuildManager:
             if new_tags_info:
                 new_push_tag = new_tags_info[1]
                 # 最新提交的版本没有打过tag
+                print(new_push_version, new_tags_info)
                 if new_push_version != new_tags_info[0]:
                     new_tag = new_tags_info[1].split('.')
                     tag_num = int(new_tag[len(new_tag) - 1]) + 1
