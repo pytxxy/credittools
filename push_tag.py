@@ -63,6 +63,9 @@ class ConfigBuildManager:
             git.checkout_or_update(source_path, self.get_remote_url(pod_name), branch=branch_name)
             git_root = git.get_git_root(source_path)
 
+            os.chdir(git_root)
+            subprocess.call(['git', 'fetch', '--tags'])
+            
             new_push_version = git.get_revision(git_root)
             new_tags_info = git.get_newest_tag_revision(git_root)
             new_push_tag = ''
