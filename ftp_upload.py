@@ -87,6 +87,9 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_r
 
             # 生产版本不一定有ver_code
             if ver_code:
+                if re.search('#', ver_code):
+                    ver_code_group = re.split('#', ver_code)
+                    ver_code = ver_code_group[0]
                 remote_dir = file_util.join_unix_path(remote_dir, ver_code, mobile_os)
             else:
                 remote_dir = file_util.join_unix_path(remote_dir, mobile_os)
