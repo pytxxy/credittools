@@ -81,22 +81,14 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_r
                     ver_name = name_code_group[0]
                 else:
                     ver_name = ver_name_code
-                    
-                if re.search('#', ver_name):
-                    ver_code_group = re.split('#', ver_name)
-                    ver_name = ver_code_group[0]
             remote_root_dir = sftp_config_data[_ROOT_SFTP_PATH_FLAG]
             remote_dir = os.path.join(remote_root_dir[sftp_root_tag], ver_name, detail_env[ver_env])
             remote_dir = file_util.normal_unix_path(remote_dir)
 
             # 生产版本不一定有ver_code
             if ver_code:
-                if re.search('#', ver_code):
-                    ver_code_group = re.split('#', ver_code)
-                    ver_code = ver_code_group[0]
                 remote_dir = file_util.join_unix_path(remote_dir, ver_code, mobile_os)
             else:
-
                 remote_dir = file_util.join_unix_path(remote_dir, mobile_os)
 
 
