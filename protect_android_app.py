@@ -327,7 +327,7 @@ def protect(ip, user_name, key, secret, file_path, dst_path=None):
 
 
 if __name__ == '__main__':
-    test_args = '-i 192.168.20.170 -u pyzx -k c2a6ca06-0989-4ff5-82cd-10494fcc53eb -s 52a3724f-f45f-429a-932f-229bad482f54 C:\\Users\\caifh.TXXY\\Desktop\\1.0.0beta_t_01-1-20200506.apk'.split()
+    test_args = '-i 192.168.20.170 -u pyzx -k c2a6ca06-0989-4ff5-82cd-10494fcc53eb -s 52a3724f-f45f-429a-932f-229bad482f54 D:\\auto_build\\pytxxy\\output\\pro\\20200612_155500\\1.0.2-12-20200612.apk'.split()
     # test_args = None
     in_args = get_args(test_args)
     util.measure_time(main, in_args)

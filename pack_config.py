@@ -270,6 +270,9 @@ class ConfigBuildManager:
             BuildConfigParser.SOURCE_PATH_FLAG]
         self.source_path = file_util.normalpath(ori_source_path)
 
+        if self.svn_user and self.svn_pwd:
+            svn.set_user_info(self.svn_user, self.svn_pwd)
+
         # 目标输出文件夹
         target_path = self.work_path + os.sep + self.ori_build_config[BuildConfigParser.WORKSPACE_FLAG][
             BuildConfigParser.TARGET_PATH_FLAG]
@@ -531,6 +534,8 @@ def get_args(src_args=None):
 
     # 优先使用命令行配置的git分支参数
     parser.add_argument('--branch', metavar='branch', dest='branch', default=None, help='code branch name')
+    parser.add_argument('--svnuser', metavar='svn_user', dest='svn_user', help='subversion username')
+    parser.add_argument('--svnpwd', metavar='svn_pwd', dest='svn_pwd', help='subversion password')
 
     src_group = parser.add_mutually_exclusive_group()
     src_group.add_argument('-s', dest='type', action='store_const', default=_PACK_TYPE_ALL, const=_PACK_TYPE_SERVER,
