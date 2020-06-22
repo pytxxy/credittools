@@ -202,7 +202,7 @@ class BuildManager:
         params[ipa_path_flag] = "{}/ipa".format(params[output_directory_flag])
 
         # 指定输出ipa名称
-        params[output_name_flag] = "{}-{}-{}.ipa".format(self.ver_name, self.ver_code, date_str)
+        params[output_name_flag] = "{}-{}-{}-{}.ipa".format(self.ver_name, self.ver_code, self.api_ver, date_str)
 
         self.ipa_output_path = params[output_directory_flag] + os.sep + params[output_name_flag]
         self.ipa_name = params[output_name_flag]
@@ -306,36 +306,6 @@ class BuildManager:
                 str_info = 'Build failed, current code version is {}.'.format(self.code_ver)
                 raise Exception(str_info)
 
-            # 将代码扫描文件复制到打包文件夹下面
-            # if self.to_upload_sftp and self.is_open_converage:
-            #     file_dir_path = ''
-            #     current_arch = ''
-            #     pattern = re.compile('export .+=.+$')
-            #     for line in open(self.coverage_shell_path):
-            #         match = pattern.match(line)
-            #         if match:
-            #             export_list = line.split('export ')
-            #             path_list = export_list[1].split('=')
-            #             if path_list[0] == 'OBJECT_FILE_DIR_normal':
-            #                 file_dir_path = eval(path_list[1])
-            #             elif path_list[0] == 'CURRENT_ARCH':
-            #                 current_arch = eval(path_list[1])
-            #     gcno_file_path = file_dir_path + os.sep + current_arch
-            #     self.gcno_file_path = myfile.normalpath(gcno_file_path)
-            #
-            #     temp_gcno_path = self.output_directory + os.sep + 'gcno'
-            #     temp_gcno_path = myfile.normalpath(temp_gcno_path)
-            #
-            #     taget_zip_path = self.output_directory + os.sep + 'gcno.zip'
-            #     shutil.copytree(self.gcno_file_path, temp_gcno_path)
-            #     print('Archiving *.gcno file')
-            #     myzip.zip_dir(temp_gcno_path, taget_zip_path)
-            #     print('Archiving Finish')
-            #     shutil.rmtree(temp_gcno_path)
-            #
-            #     # 复制env.sh文件到打包文件夹下面
-            #     target_env_shell_path = self.output_directory + os.sep + 'env.sh'
-            #     shutil.copyfile(self.coverage_shell_path, target_env_shell_path)
 
 
 

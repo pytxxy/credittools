@@ -63,6 +63,9 @@ class ConfigBuildManager:
             git.checkout_or_update(source_path, self.get_remote_url(pod_name), branch=branch_name)
             git_root = git.get_git_root(source_path)
 
+            os.chdir(git_root)
+            subprocess.call(['git', 'fetch', '--tags'])
+            
             new_push_version = git.get_revision(git_root)
             new_tags_info = git.get_newest_tag_revision(git_root)
             new_push_tag = ''
@@ -71,6 +74,7 @@ class ConfigBuildManager:
             if new_tags_info:
                 new_push_tag = new_tags_info[1]
                 # 最新提交的版本没有打过tag
+                print(new_push_version, new_tags_info)
                 if new_push_version != new_tags_info[0]:
                     new_tag = new_tags_info[1].split('.')
                     tag_num = int(new_tag[len(new_tag) - 1]) + 1
