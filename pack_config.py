@@ -314,7 +314,7 @@ def process_item(src_dir, dst_dir, temp_dir, _type, ver_code, filter_folders, fi
     child_dir_arr = get_firstfolderitem(src_dir)
     if filter_folders:
         for listfile in child_dir_arr:
-            listfile_path = src_dir + os.sep + listfile;
+            listfile_path = src_dir + os.sep + listfile
             # 是否在文件排除列表里面
             if listfile in filter_folders:
                 # 判断是文件还是文件夹
