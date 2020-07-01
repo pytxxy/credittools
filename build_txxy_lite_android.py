@@ -89,6 +89,7 @@ class BuilderLabel:
     VER_CODE_FLAG = 'ver_code'
     VER_NO_FLAG = 'ver_no'
     IS_TEST_FLAG = 'is_test'
+    APP_NAME_FLAG = 'app_name'
     DEMO_LABEL_FLAG = 'demo_label'
     API_VER_FLAG = 'api_ver'
     APP_CODE_FLAG = 'app_code'
@@ -104,15 +105,17 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
-               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google']
+               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name']
 
     cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
-                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
+                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
+                      '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name}'
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} -PBUILD_FOR_GOOGLE_PLAY={for_google} ' \
-                      '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label}'
+                      '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} ' \
+                      '-PCUSTOM_APP_NAME={app_name}'
 
     def __init__(self):
         # 先初始化默认值
@@ -157,6 +160,7 @@ class BuildCmd:
         self.demo_label = info[BuilderLabel.DEMO_LABEL_FLAG]
         self.is_arm64 = str(info[BuilderLabel.ARM64_FLAG]).lower()
         self.for_google = str(info[BuilderLabel.FOR_GOOGLE_FLAG]).lower()
+        self.app_name = info[BuilderLabel.APP_NAME_FLAG]
 
     def get_map(self):
         rtn_map = {}
@@ -666,6 +670,7 @@ class BuildManager:
 
         params[BuilderLabel.ENV_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG]
 
+        params[BuilderLabel.APP_NAME_FLAG] = self.app_name
         params[BuilderLabel.DEMO_LABEL_FLAG] = self.demo_label
 
         # 指定输出归档文件地址
@@ -857,6 +862,7 @@ def get_args(src_args=None):
     parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy',
                         choices=['txxy', 'xycx', 'pyqx', 'pyzx'],
                         help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin; pyzx: peng yuan zheng xin;')
+    parser.add_argument('--appname', metavar='app_name', dest='app_name', default='@string/app_name', help='application name')
 
     parser.add_argument('--test', dest='is_test', action='store_true', default=False,
                         help='indicate just to test config')
