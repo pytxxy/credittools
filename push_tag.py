@@ -8,6 +8,7 @@ import time
 import xmltodict
 import ast
 import subprocess
+import sys
 
 
 class BuildConfigParser:
@@ -97,7 +98,13 @@ class ConfigBuildManager:
                 if new_push_tag in detail_ver.strip():
                     is_revision_upload = True
             if not is_revision_upload:
-                subprocess.call(['sh', 'push.sh'])
+                try:
+                    ret_code = subprocess.check_call(['sh', 'push.sh'])
+                    print(ret_code)
+                except Exception as e:
+                    print('return_code:', e.returncode)
+                    sys.exit(0)
+
 
             self.tag_info[pod_name] = new_push_tag
 
