@@ -41,6 +41,7 @@ class BuilderLabel:
     MAIN_FLAG = 'main'
 
     DEFAULT_CHAN = 'pycredit'
+    CHANNEL_FLAG = 'channel'
 
     ENCRYPT_FLAG = 'encrypt'
     ENC_BIN_PATH_FLAG = 'enc_bin_path'
@@ -105,17 +106,17 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
-               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name']
+               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
 
     cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
                       '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
-                      '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name}'
+                      '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} -PBUILD_FOR_GOOGLE_PLAY={for_google} ' \
                       '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} ' \
-                      '-PCUSTOM_APP_NAME={app_name}'
+                      '-PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     def __init__(self):
         # 先初始化默认值
@@ -130,6 +131,7 @@ class BuildCmd:
         self.for_publish = str(True).lower()
         self.coverage_enabled = str(True).lower()
         self.httpdns = str(False).lower()
+        self.channel = BuilderLabel.DEFAULT_CHAN
         self.demo_label = 'normal'
 
     def update_value(self, info):
@@ -161,6 +163,7 @@ class BuildCmd:
         self.is_arm64 = str(info[BuilderLabel.ARM64_FLAG]).lower()
         self.for_google = str(info[BuilderLabel.FOR_GOOGLE_FLAG]).lower()
         self.app_name = info[BuilderLabel.APP_NAME_FLAG]
+        self.channel = info[BuilderLabel.CHANNEL_FLAG]
 
     def get_map(self):
         rtn_map = {}
@@ -618,6 +621,8 @@ class BuildManager:
             BuildConfigLabel.MAIN_FLAG]
         params[BuilderLabel.BUILDER_VER_FLAG] = self.builder_ver
 
+        params[BuilderLabel.CHANNEL_FLAG] = self.channel
+
         bin_name = self.ori_build_config[BuildConfigLabel.ENCRYPT_FLAG][BuildConfigLabel.BIN_NAME_FLAG]
         enc_bin_path = os.path.join(self.work_path, bin_name)
         enc_bin_path = file_util.normalpath(enc_bin_path)
@@ -819,14 +824,20 @@ class BuildManager:
             str_info = 'The output file name {} is invalid!'.format(target_name)
             raise Exception(str_info)
 
+        channel = '' # 调用的接口内部实现默认是空串
+        if self.channel != BuilderLabel.DEFAULT_CHAN:
+            channel = self.channel
+
         # ftp_config_path = os.path.join(self.work_path, 'config')
         ftp_config_path = self.work_path
-        print('ver_name_info:', ver_name_info)
-        print('target_name: ', target_name)
-        print('source_name:', source_name)
+        print(f'ver_name_info: {ver_name_info}')
+        print(f'target_name: {target_name}')
+        print(f'source_name: {source_name}')
+        print(f'channel: {channel}')
 
         ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, self.app_code,
-                                  to_upload_path, 'Android', target_name, source_name)
+                                  to_upload_path, mobile_os='Android', channel=channel, target_file_name=target_name,
+                                  source_file_name=source_name)
 
 
 def main(args):
@@ -874,6 +885,7 @@ def get_args(src_args=None):
                         help='indicate to build with arm64')
     parser.add_argument('--google', dest='for_google', action='store_true', default=False,
                         help='indicate to build for google play')
+    parser.add_argument('--channel', metavar='channel', dest='channel', type=str, default=BuilderLabel.DEFAULT_CHAN, help='application channel')
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal',
                         choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
@@ -886,11 +898,6 @@ def get_args(src_args=None):
 
 
 if __name__ == '__main__':
-    #     test_args = '-b -s huawei D:/version_build/pytxxy/config/dynamic/update_config.xml'.split()
-
-    # 转换输出编码，确保打印正常
-    #     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, sys.stdin.encoding)
-
     test_args = None
     args = get_args(test_args)
     utility.measure_time(main, args)
