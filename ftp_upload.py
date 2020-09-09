@@ -34,7 +34,7 @@ class SFTPConfigFile:
 
 
 def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_root_tag='txxy',
-                   local_dir_path='', mobile_os='', target_file_name='', source_file_name=''):
+                   local_dir_path='', mobile_os='', channel='', target_file_name='', source_file_name=''):
     """
         :param sftp_root_tag:
         :param sftp_config_path: sftp 配置文件路径
@@ -90,6 +90,9 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, svn_version, sftp_r
                 remote_dir = file_util.join_unix_path(remote_dir, ver_code, mobile_os)
             else:
                 remote_dir = file_util.join_unix_path(remote_dir, mobile_os)
+
+            if len(channel):
+                remote_dir = file_util.join_unix_path(remote_dir, channel)
 
 
             # 上传 ipa 包或者 apk 包
