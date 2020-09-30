@@ -23,8 +23,6 @@ import creditutils.zip_util as zip_util
 import creditutils.apk_util as apk_util
 
 
-BuilderVer = IntEnum('BuilderVer', ('JavaLast', 'Kotlin01'))
-
 _system = platform.system()
 if _system == 'Windows':
     _system_pre = ''
@@ -43,20 +41,11 @@ class BuilderLabel:
     DEFAULT_CHAN = 'pycredit'
     CHANNEL_FLAG = 'channel'
 
-    ENCRYPT_FLAG = 'encrypt'
-    ENC_BIN_PATH_FLAG = 'enc_bin_path'
-    NET_CONFIG_PATH_FLAG = 'net_config_path'
-    DEV_FLAG = 'dev'
-    NET_INFO_FLAG = 'net_info'
-    HOST_FLAG = 'host'
-    PORT_FLAG = 'port'
-    SSLPORT_FLAG = 'sslport'
-
     ENV_FLAG = 'env'
     NET_ENV_FLAG = 'net_env'
     ENV_MODE_FLAG = 'env_mode'
+    KEY_FLAG = 'key'
     TYPE_FLAG = 'type'
-    ENCRYPT_ITEMS_FLAG = 'encrypt_items'
     FILE_ITEM_FLAG = 'file_item'
     GRADLE_FLAG = 'gradle'
     ARM64_FLAG = 'arm64'
@@ -76,14 +65,6 @@ class BuilderLabel:
     STOREPASS_FLAG = 'storepass'
     STOREALIAS_FLAG = 'storealias'
 
-    BUILD_CLASS_FLAG = 'build_class'
-    SRC_PATH_FLAG = 'src_path'
-    DST_PATH_FLAG = 'dst_path'
-
-    COVERAGE_FLAG = 'coverage'
-    COMPILE_FLAG = 'compile'
-    BUILDER_VER_FLAG = 'builder_ver'
-
     OUTPUT_DIRECTORY_FLAG = 'output_directory'
     OUTPUT_NAME_FLAG = 'output_name'
     VER_NAME_FLAG = 'ver_name'
@@ -98,7 +79,8 @@ class BuilderLabel:
     LABEL_FLAG = 'label'
     BETA_LABEL_FLAG = 'beta_label'
     HTTPDNS_FLAG = 'httpdns'
-    NET_VAR_FLAG = 'net_var'
+
+    CODE_VER_FLAG = 'code_ver'
 
 
 class BuildCmd:
@@ -106,16 +88,16 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
-               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
+               'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
 
     cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
-                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
-                      '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
+                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PHTTP_DNS_OPEN={httpdns} ' \
+                      '-PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} -PBUILD_FOR_GOOGLE_PLAY={for_google} ' \
-                      '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} ' \
+                      '-PFOR_PUBLISH={for_publish} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} ' \
                       '-PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     def __init__(self):
@@ -129,7 +111,6 @@ class BuildCmd:
         self.api_ver = None
         self.app_code = None
         self.for_publish = str(True).lower()
-        self.coverage_enabled = str(True).lower()
         self.httpdns = str(False).lower()
         self.channel = BuilderLabel.DEFAULT_CHAN
         self.demo_label = 'normal'
@@ -157,7 +138,6 @@ class BuildCmd:
         self.app_code = info[BuilderLabel.APP_CODE_FLAG].capitalize()
 
         env_mode = info[BuilderLabel.ENV_MODE_FLAG]
-        self.coverage_enabled = info[BuilderLabel.COVERAGE_FLAG][BuilderLabel.COMPILE_FLAG][env_mode].lower()
         self.httpdns = info[BuilderLabel.ENV_FLAG][BuilderLabel.HTTPDNS_FLAG][env_mode].lower()
         self.demo_label = info[BuilderLabel.DEMO_LABEL_FLAG]
         self.is_arm64 = str(info[BuilderLabel.ARM64_FLAG]).lower()
@@ -213,54 +193,6 @@ def make_apk_with_gradle(work_path, cmd_str, pre_cmd=BuildCmd.pre_cmd):
             os.chdir(pre_cwd)
 
 
-class EnvironmentUpdater:
-    # example: "public static final int ENV_CONFIG = DEVELOP_ENV;"
-    CONFIG_PATTERN = '^(\s*public\s+static\s+final\s+int\s+ENV_CONFIG\s*=\s*)(\w+)(_ENV;)'
-
-    def __init__(self, config_path):
-        self.config_path = config_path
-        self.config_data = file_util.read_file_content(self.config_path)
-        self.config_modified = False
-
-        env_ptn = re.compile(EnvironmentUpdater.CONFIG_PATTERN, flags=(re.M))
-        config_match = env_ptn.search(self.config_data)
-        if config_match:
-            self.config = config_match.group(2)
-        else:
-            self.config = ''
-
-    def _update_config(self, config=None):
-        if config:
-            dest_config = config.upper()
-            if dest_config != self.config:
-                ptn = re.compile(EnvironmentUpdater.CONFIG_PATTERN, flags=(re.M))
-
-                modify_flag = False
-                new_str = None
-                match = ptn.search(self.config_data)
-                if match:
-                    modify_flag = True
-                    new_str = match.group(1) + dest_config + match.group(3)
-
-                    info_format = 'replace environment mode "{}" with "{}"!'
-                    print(info_format.format(self.config, dest_config))
-
-                    self.config = dest_config
-
-                if modify_flag:
-                    self.config_modified = True
-                    self.config_data = ptn.sub(new_str, self.config_data)
-            else:
-                info_format = 'environment mode remain as "{}"!'
-                print(info_format.format(self.config))
-
-    def update_config(self, config=None):
-        self._update_config(config)
-
-        if self.config_modified:
-            file_util.write_to_file(self.config_path, self.config_data, 'utf-8')
-
-
 # 对整个工程内相关文件进行替换操作
 class ProjectBuilder:
     def __init__(self, info):
@@ -273,63 +205,7 @@ class ProjectBuilder:
 
     # 更新通用信息
     def update_info(self):
-        builder_ver = self.info[BuilderLabel.BUILDER_VER_FLAG]
-
-        # 新的kotlin工程，配置都已迁移到gradle脚本，不再需要python脚本进行处理
-        if builder_ver != BuilderVer.JavaLast:
-            return
-
-        # 准备好解密文件环境
-        enc_bin_path = self.info[BuilderLabel.ENC_BIN_PATH_FLAG]
-        preproc = FileEncryptDecrypt(enc_bin_path)
-
-        # 更新网络配置
-        net_info = self.info[BuilderLabel.NET_INFO_FLAG]
-        net_config_path = self.info[BuilderLabel.NET_CONFIG_PATH_FLAG]
-        # 先解密文件再进行其它处理
-        preproc.decrypt(net_config_path)
-
-        # 更新网络配置信息
-        net_config_updater = NetworkConfigUpdater(net_config_path)
-        net_env = self.info[BuilderLabel.NET_ENV_FLAG]
-        if net_env in net_info:
-            target_net_info = net_info[net_env]
-        else:
-            target_net_info = net_info[BuilderLabel.DEV_FLAG]
-
-        net_config_updater.update_info(target_net_info)
-
-        # 更新代码内部使用环境变量
-        env_config = self.info[BuilderLabel.ENV_FLAG]
-        env_file_path = os.path.join(self.prj_root, env_config[BuilderLabel.FILE_ITEM_FLAG])
-        env_file_path = file_util.normalpath(env_file_path)
-        env_mode = self.info[BuilderLabel.ENV_MODE_FLAG]
-        target_env_mode = env_config[BuilderLabel.NET_VAR_FLAG][env_mode]
-        if os.path.exists(env_file_path):
-            env_updater = EnvironmentUpdater(env_file_path)
-            env_updater.update_config(target_env_mode)
-        else:
-            print('not exist {}!'.format(env_file_path))
-
-        # 如果是release版本，则进行加密处理 (应用内部对加密和非加密状态都能正常处理，所以在debug模式当前无须处理)
-        mode_flag = self.info[BuilderLabel.TYPE_FLAG]
-        mode = apk_builder.FLAG_MODE_MAP[mode_flag.lower().strip()]
-        if mode == apk_builder.RELEASE_MODE:
-            if BuilderLabel.ENCRYPT_FLAG in self.info:
-                encrypt_info = self.info[BuilderLabel.ENCRYPT_FLAG]
-                if BuilderLabel.FILE_ITEM_FLAG in encrypt_info:
-                    file_items = encrypt_info[BuilderLabel.FILE_ITEM_FLAG]
-                    to_enc_list = []
-                    if isinstance(file_items, list):
-                        to_enc_list.extend(file_items)
-                    else:
-                        to_enc_list.append(file_items)
-
-                    for item in to_enc_list:
-                        file_path = os.path.join(self.prj_root, file_util.normalpath(item))
-                        preproc.encrypt(file_path)
-                        str_info = 'Encrypted {}.'.format(file_path)
-                        print(str_info)
+        pass
 
     def get_build_cmd(self):
         build_cmd = BuildCmd()
@@ -356,7 +232,7 @@ class ProjectBuilder:
         apk_name = os.path.basename(self.main_prj_path)
 
         apk_out_path = self.main_prj_path + '/build/outputs/apk/'
-        build_type = self.info[BuilderLabel.TYPE_FLAG]
+        # build_type = self.info[BuilderLabel.TYPE_FLAG]
         # 默认名称形式
         # apk_path = '{}{}-{}.apk'.format(apk_out_path, apk_name, build_type)
         # 自定义名称形式
@@ -392,22 +268,6 @@ class ProjectBuilder:
                 BuilderLabel.OUTPUT_NAME_FLAG]
             file_util.replace_file(src_file, dst_file)
 
-            # 拷贝编译生成的class文件，便于服务器生成代码覆盖率文件
-            if BuilderLabel.BUILD_CLASS_FLAG in self.info and len(self.info[BuilderLabel.BUILD_CLASS_FLAG]) >= 2:
-                src_class_path = self.main_prj_path + os.sep + self.info[BuilderLabel.BUILD_CLASS_FLAG][
-                    BuilderLabel.SRC_PATH_FLAG]
-                src_class_path = file_util.normalpath(src_class_path)
-
-                dst_class_relative_path = self.info[BuilderLabel.BUILD_CLASS_FLAG][BuilderLabel.DST_PATH_FLAG]
-                dst_class_zip_path = self.info[BuilderLabel.OUTPUT_DIRECTORY_FLAG] + os.sep + 'classes.zip'
-
-                if os.path.isdir(src_class_path):
-                    #                     shutil.copytree(src_class_path, dst_class_path)
-                    rev_index = -len(dst_class_relative_path)
-                    zip_src_root = src_class_path[:rev_index]
-                    zip_util.zip_dir(src_class_path, dst_class_zip_path, zip_src_root)
-                    print('success zip {} to {}.'.format(dst_class_relative_path, dst_class_zip_path))
-
             print('built the apk {}.'.format(dst_file))
         else:
             print('build {} failed!'.format(apk_name))
@@ -421,92 +281,6 @@ class ProjectBuilder:
             raise Exception('{} is invalid!'.format(whole_name))
 
 
-# 对网络配置进行更新
-class NetworkConfigUpdater:
-    HOST_FLAG = 'host'
-    PORT_FLAG = 'port'
-    SSLPORT_FLAG = 'sslport'
-
-    def __init__(self, src_path):
-        self.src_path = src_path
-        self.src_data = file_util.read_file_content(self.src_path)
-        self.modify_flag = False
-
-    def update_info(self, target_info):
-        if target_info:
-            self._update_config(target_info)
-
-        if self.modify_flag:
-            file_util.write_to_file(self.src_path, self.src_data, 'utf-8')
-
-    # 使用直接替换的方式实现
-    def _update_config(self, target_info):
-        modify_flag = False
-        #         print(self.src_data)
-        ptn_str_format = '("{}"\s*:\s*"?)([^",]*)("?\s*,)'
-        for key in target_info:
-            ptn_str = ptn_str_format.format(key)
-            ptn = re.compile(ptn_str, flags=(re.I | re.M))
-            # 避免自引用和value值 串在一起引起混淆，所以在中间添加特殊字符进行分隔(有更优雅的方式实现该功能，所以进行了替换)
-            # re_sep = re.escape('#!#!#')
-            # re_rep_unit = re_sep + re.escape(target_info[key])
-            # new_data = ptn.sub('\\1' + re_rep_unit + '\\3', self.src_data)
-            # new_data = new_data.replace(re_rep_unit, target_info[key])
-
-            re_rep_unit = re.escape(target_info[key])
-            new_data = ptn.sub('\\g<1>' + re_rep_unit + '\\g<3>', self.src_data)
-
-            if new_data != self.src_data:
-                modify_flag = True
-                #                 print('-'*80)
-                #                 print(new_data)
-                self.src_data = new_data
-                info_format = '{} has been set as {}.'
-                print(info_format.format(key, target_info[key]))
-            else:
-                info_format = '{} remain as {}.'
-                print(info_format.format(key, target_info[key]))
-
-        if modify_flag:
-            self.modify_flag = True
-
-
-class FileEncryptDecrypt:
-    _SUFFIX = '_temp_abchxyz'
-
-    def __init__(self, bin_path):
-        self.bin_path = bin_path
-
-    def encrypt(self, filepath):
-        src_path = filepath
-        dst_path = filepath + FileEncryptDecrypt._SUFFIX
-        self._encrypt(src_path, dst_path)
-        os.remove(src_path)
-        os.rename(dst_path, src_path)
-
-    def decrypt(self, filepath):
-        src_path = filepath
-        dst_path = filepath + FileEncryptDecrypt._SUFFIX
-        self._decrypt(src_path, dst_path)
-        os.remove(src_path)
-        os.rename(dst_path, src_path)
-
-    def _encrypt(self, src_path, dst_path):
-        args = []
-        args.append(self.bin_path)
-        args.append(src_path)
-        args.append(dst_path)
-        subprocess.check_call(args)
-
-    def _decrypt(self, src_path, dst_path):
-        args = []
-        args.append(self.bin_path)
-        args.append('-d')
-        args.append(src_path)
-        args.append(dst_path)
-        subprocess.check_call(args)
-
-
 class BuildConfigLabel:
     ROOT_FLAG = 'config'
     WORKSPACE_FLAG = 'workspace'
@@ -517,29 +291,17 @@ class BuildConfigLabel:
     STATIC_FLAG = 'static'
     CODE_URL_FLAG = 'code_url'
 
-    NETWORK_FLAG = 'network'
-    RELATIVE_PATH_FLAG = 'relative_path'
-
-    ENCRYPT_FLAG = 'encrypt'
-    BIN_NAME_FLAG = 'bin_name'
+    API_VER_FLAG = 'api_ver'
     FILE_ITEM_FLAG = 'file_item'
+    KEY_FLAG = 'key'
 
     PROTECT_FLAG = 'protect'
     IS_NEED_FLAG = 'is_need'
 
     SIGNER_FLAG = 'signer'
 
-    BUILD_CLASS_FLAG = 'build_class'
-
-    COVERAGE_FLAG = 'coverage'
-
     ENV_FLAG = 'env'
     MAP_FLAG = 'map'
-    DEV_FLAG = 'dev'
-    TEST_FLAG = 'test'
-    PRE_FLAG = 'pre'
-    PRO_FLAG = 'pro'
-    TARGET_FLAG = 'target'
     BUILD_INFO_TEMPLET_FLAG = 'build_info_templet'
 
     LABEL_FLAG = 'label'
@@ -591,6 +353,8 @@ class BuildManager:
             BuildConfigLabel.PRJ_PATH_FLAG])
         self.project_path = file_util.normalpath(ori_project_path)
 
+        self.api_ver_config = None
+
     def _get_whole_ver_name(self, beta_label_map, label_map):
         beta_label = 'beta'
         ver_no_label = ''
@@ -611,6 +375,38 @@ class BuildManager:
         whole_ver_name = '{}{}{}{}'.format(self.ver_name, beta_label, net_env_label, ver_no_label)
         return whole_ver_name
 
+    def _get_code_api_ver(self, file_path, target_key):
+        file_data = file_util.read_file_content(file_path)
+        ptn_str_format = '({}\s*=\s*)([^\s]*)'
+        ptn_str = ptn_str_format.format(target_key)
+        ptn = re.compile(ptn_str, flags=(re.I | re.M))
+
+        result = ptn.search(file_data)
+        if result:
+            return result.group(2)
+        else:
+            return None
+
+    def _generate_desc(self):
+        curr_api_ver = None
+        if self.api_ver:
+            curr_api_ver = self.api_ver
+        else:
+            if self.api_ver_config:
+                relative_path = file_util.normalpath(self.api_ver_config[BuildConfigLabel.FILE_ITEM_FLAG])
+                file_path = os.path.join(self.prj_root, relative_path)
+                target_key = self.api_ver_config[BuildConfigLabel.KEY_FLAG]
+                curr_api_ver = self._get_code_api_ver(file_path, target_key)
+
+        desc_data = dict()
+        desc_data[BuilderLabel.VER_NAME_FLAG] = self.whole_ver_name
+        desc_data[BuilderLabel.CODE_VER_FLAG] = self.prj_code_ver
+        desc_data[BuilderLabel.VER_CODE_FLAG] = self.ver_code
+        if curr_api_ver:
+            desc_data[BuilderLabel.API_VER_FLAG] = curr_api_ver
+
+        return desc_data
+
     # 配置每个工程个性化的内容
     def _get_pro_build_config(self):
         # 指定项目地址
@@ -619,28 +415,19 @@ class BuildManager:
         params[BuilderLabel.PRJ_ROOT_FLAG] = self.prj_root
         params[BuilderLabel.MAIN_FLAG] = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
             BuildConfigLabel.MAIN_FLAG]
-        params[BuilderLabel.BUILDER_VER_FLAG] = self.builder_ver
 
         params[BuilderLabel.CHANNEL_FLAG] = self.channel
 
-        bin_name = self.ori_build_config[BuildConfigLabel.ENCRYPT_FLAG][BuildConfigLabel.BIN_NAME_FLAG]
-        enc_bin_path = os.path.join(self.work_path, bin_name)
-        enc_bin_path = file_util.normalpath(enc_bin_path)
-        params[BuilderLabel.ENC_BIN_PATH_FLAG] = enc_bin_path
-        params[BuilderLabel.ENCRYPT_FLAG] = self.ori_build_config[BuildConfigLabel.ENCRYPT_FLAG]
-
-        net_config_path = os.path.join(self.prj_root, self.ori_build_config[BuildConfigLabel.NETWORK_FLAG][
-            BuildConfigLabel.RELATIVE_PATH_FLAG])
-        net_config_path = file_util.normalpath(net_config_path)
-        params[BuilderLabel.NET_CONFIG_PATH_FLAG] = net_config_path
-
-        params[BuilderLabel.NET_INFO_FLAG] = self.ori_build_config[BuildConfigLabel.NETWORK_FLAG]
         params[BuilderLabel.NET_ENV_FLAG] = self.ver_env
         params[BuilderLabel.ENV_MODE_FLAG] = \
             self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
         params[BuilderLabel.ARM64_FLAG] = self.is_arm64
         params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
+        
+        # 获取网络api version配置信息
+        if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:
+            self.api_ver_config = self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.API_VER_FLAG]
 
         # 获取加固配置信息
         params[BuilderLabel.PROTECT_FLAG] = self.ori_build_config[BuildConfigLabel.PROTECT_FLAG]
@@ -649,10 +436,6 @@ class BuildManager:
             is_need_infos[k] = str_utils.get_bool(is_need_infos[k])
 
         params[BuilderLabel.SIGNER_FLAG] = self.ori_build_config[BuildConfigLabel.SIGNER_FLAG]
-
-        params[BuilderLabel.BUILD_CLASS_FLAG] = self.ori_build_config[BuildConfigLabel.BUILD_CLASS_FLAG]
-
-        params[BuilderLabel.COVERAGE_FLAG] = self.ori_build_config[BuildConfigLabel.COVERAGE_FLAG]
 
         # 将时间格式化
         curr_time = time.localtime()
@@ -741,6 +524,8 @@ class BuildManager:
             if os.path.exists(self.apk_output_path) and os.path.isfile(self.apk_output_path):
                 # 将编译信息写文件
                 self._write_build_info()
+                # 生成apk描述信息
+                desc_data = self._generate_desc()
 
                 target_name = os.path.basename(self.apk_output_path)
                 to_upload_path = os.path.dirname(self.apk_output_path)
@@ -757,7 +542,7 @@ class BuildManager:
 
                 # 进行编译好的版本提交操作
                 if hasattr(self, 'to_upload') and self.to_upload:
-                    self._upload_file(source_name, target_name, to_upload_path)
+                    self._upload_file(source_name, target_name, to_upload_path, desc_data=desc_data)
             else:
                 str_info = 'Build failed, code version is {}.'.format(self.prj_code_ver)
                 print(str_info)
@@ -816,7 +601,7 @@ class BuildManager:
 
         return source_name
 
-    def _upload_file(self, source_name, target_name, to_upload_path):
+    def _upload_file(self, source_name, target_name, to_upload_path, desc_data = None):
         result = re.match(BuildManager.__APK_OUTPUT_PATH_PATTERN, target_name)
         if result:
             ver_name_info = result.group(1)
@@ -837,7 +622,7 @@ class BuildManager:
 
         ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, self.app_code,
                                   to_upload_path, mobile_os='Android', channel=channel, target_file_name=target_name,
-                                  source_file_name=source_name)
+                                  source_file_name=source_name, desc_data=desc_data)
 
 
 def main(args):
@@ -890,7 +675,6 @@ def get_args(src_args=None):
                         choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
-    parser.add_argument('--builderver', metavar='builder_ver', dest='builder_ver', default=BuilderVer.Kotlin01, type=int, help='specify current builder ver')
 
     #     parser.print_help()
 

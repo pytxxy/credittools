@@ -372,9 +372,57 @@ class ManifestInfoUpdater:
             print('update chan_str with ' + chan_str + ' failed!')
 
 
+# 对网络配置进行更新
+class NetworkConfigUpdater:
+    HOST_FLAG = 'host'
+    PORT_FLAG = 'port'
+    SSLPORT_FLAG = 'sslport'
+
+    def __init__(self, src_path):
+        self.src_path = src_path
+        self.src_data = file_util.read_file_content(self.src_path)
+        self.modify_flag = False
+
+    def update_info(self, target_info):
+        if target_info:
+            self._update_config(target_info)
+
+        if self.modify_flag:
+            file_util.write_to_file(self.src_path, self.src_data, 'utf-8')
+
+    # 使用直接替换的方式实现
+    def _update_config(self, target_info):
+        modify_flag = False
+        #         print(self.src_data)
+        ptn_str_format = '("{}"\s*:\s*"?)([^",]*)("?\s*,)'
+        for key in target_info:
+            ptn_str = ptn_str_format.format(key)
+            ptn = re.compile(ptn_str, flags=(re.I | re.M))
+            # 避免自引用和value值 串在一起引起混淆，所以在中间添加特殊字符进行分隔(有更优雅的方式实现该功能，所以进行了替换)
+            # re_sep = re.escape('#!#!#')
+            # re_rep_unit = re_sep + re.escape(target_info[key])
+            # new_data = ptn.sub('\\1' + re_rep_unit + '\\3', self.src_data)
+            # new_data = new_data.replace(re_rep_unit, target_info[key])
+
+            re_rep_unit = re.escape(target_info[key])
+            new_data = ptn.sub('\\g<1>' + re_rep_unit + '\\g<3>', self.src_data)
+
+            if new_data != self.src_data:
+                modify_flag = True
+                #                 print('-'*80)
+                #                 print(new_data)
+                self.src_data = new_data
+                info_format = '{} has been set as {}.'
+                print(info_format.format(key, target_info[key]))
+            else:
+                info_format = '{} remain as {}.'
+                print(info_format.format(key, target_info[key]))
+
+        if modify_flag:
+            self.modify_flag = True
+
+
 '''使用特定工具对文件进行加解密处理'''
-
-
 class FileEncryptDecrypt:
     _SUFFIX = '_temp_abchxyz'
 
@@ -409,81 +457,6 @@ class FileEncryptDecrypt:
         args.append(src_path)
         args.append(dst_path)
         subprocess.check_call(args)
-
-
-# 对网络配置进行更新
-class NetworkConfigUpdater:
-    HOST_FLAG = 'host'
-    PORT_FLAG = 'port'
-    SSLPORT_FLAG = 'sslport'
-
-    def __init__(self, src_path):
-        self.src_path = src_path
-        self.src_data = file_util.read_file_content(self.src_path)
-        self.modify_flag = False
-
-    def update_info(self, target_info):
-        if target_info:
-            self._update_config(target_info)
-
-        if self.modify_flag:
-            file_util.write_to_file(self.src_path, self.src_data, 'utf-8')
-
-    '''使用正则表达式的方式实现，便于后续扩展'''
-
-    def _update_config_with_re(self, mode):
-        # example: "url": "http://120.197.113.2:8181",
-        pattern = '^(\s*"url"\:\s+"http\://(?:\d+\.){3}\d+\:)\d+'
-        dst_port = NetworkConfigUpdater.MODE_MAP[mode]
-        ptn = re.compile(pattern, flags=(re.I | re.M))
-        re_sep = re.escape('#!#!#')
-        re_rep_unit = re_sep + re.escape(dst_port)
-
-        modify_flag = False
-        print(self.src_data)
-        new_data = ptn.sub('\\1' + re_rep_unit, self.src_data)
-        if new_data != self.src_data:
-            modify_flag = True
-            print('-' * 80)
-            print(new_data)
-            self.src_data = new_data.replace(re_sep, '')
-            print('-' * 80)
-            print(self.src_data)
-
-        if modify_flag:
-            self.modify_flag = True
-            print('update network port with ' + dst_port + ' success.')
-        else:
-            print('update network port with ' + dst_port + ' failed!')
-
-    '''使用直接替换的方式实现'''
-
-    def _update_config(self, target_info):
-
-        modify_flag = False
-        #         print(self.src_data)
-        ptn_str_format = '("{}"\s*:\s*"?)([^",]*)("?\s*,)'
-        for key in target_info:
-            ptn_str = ptn_str_format.format(key)
-            ptn = re.compile(ptn_str, flags=(re.I | re.M))
-            # 避免自引用和value值 串在一起引起混淆，所以在中间添加特殊字符进行分隔
-            re_sep = re.escape('#!#!#')
-            re_rep_unit = re_sep + re.escape(target_info[key])
-            new_data = ptn.sub('\\1' + re_rep_unit + '\\3', self.src_data)
-            new_data = new_data.replace(re_rep_unit, target_info[key])
-            if new_data != self.src_data:
-                modify_flag = True
-                #                 print('-'*80)
-                #                 print(new_data)
-                self.src_data = new_data
-                info_format = '{} has been set as {}.'
-                print(info_format.format(key, target_info[key]))
-            else:
-                info_format = '{} remain as {}.'
-                print(info_format.format(key, target_info[key]))
-
-        if modify_flag:
-            self.modify_flag = True
 
 
 class EnvironmentUpdater:
