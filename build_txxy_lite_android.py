@@ -65,6 +65,8 @@ class BuilderLabel:
     STOREPASS_FLAG = 'storepass'
     STOREALIAS_FLAG = 'storealias'
 
+    COVERAGE_FLAG = 'coverage'
+    COMPILE_FLAG = 'compile'
     OUTPUT_DIRECTORY_FLAG = 'output_directory'
     OUTPUT_NAME_FLAG = 'output_name'
     VER_NAME_FLAG = 'ver_name'
@@ -88,16 +90,16 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
-               'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
+               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
 
     cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
-                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PHTTP_DNS_OPEN={httpdns} ' \
-                      '-PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
+                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
+                      '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} -PBUILD_FOR_GOOGLE_PLAY={for_google} ' \
-                      '-PFOR_PUBLISH={for_publish} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} ' \
+                      '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} ' \
                       '-PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     def __init__(self):
@@ -111,6 +113,7 @@ class BuildCmd:
         self.api_ver = None
         self.app_code = None
         self.for_publish = str(True).lower()
+        self.coverage_enabled = str(True).lower()
         self.httpdns = str(False).lower()
         self.channel = BuilderLabel.DEFAULT_CHAN
         self.demo_label = 'normal'
@@ -138,6 +141,7 @@ class BuildCmd:
         self.app_code = info[BuilderLabel.APP_CODE_FLAG].capitalize()
 
         env_mode = info[BuilderLabel.ENV_MODE_FLAG]
+        self.coverage_enabled = info[BuilderLabel.COVERAGE_FLAG][BuilderLabel.COMPILE_FLAG][env_mode].lower()
         self.httpdns = info[BuilderLabel.ENV_FLAG][BuilderLabel.HTTPDNS_FLAG][env_mode].lower()
         self.demo_label = info[BuilderLabel.DEMO_LABEL_FLAG]
         self.is_arm64 = str(info[BuilderLabel.ARM64_FLAG]).lower()
@@ -300,6 +304,7 @@ class BuildConfigLabel:
 
     SIGNER_FLAG = 'signer'
 
+    COVERAGE_FLAG = 'coverage'
     ENV_FLAG = 'env'
     MAP_FLAG = 'map'
     BUILD_INFO_TEMPLET_FLAG = 'build_info_templet'
@@ -436,6 +441,7 @@ class BuildManager:
             is_need_infos[k] = str_utils.get_bool(is_need_infos[k])
 
         params[BuilderLabel.SIGNER_FLAG] = self.ori_build_config[BuildConfigLabel.SIGNER_FLAG]
+        params[BuilderLabel.COVERAGE_FLAG] = self.ori_build_config[BuildConfigLabel.COVERAGE_FLAG]
 
         # 将时间格式化
         curr_time = time.localtime()
