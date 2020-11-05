@@ -10,14 +10,17 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
+            // "args": [
+            //     "http://gitlab.app.com",
+            //     "CYJ7P97ssR6pACMRC_aw",
+            //     "http://192.168.20.202",
+            //     "CYJ7P97ssR6pACMRC_aw",
+            //     "G:\\temp\\git_root",
+            //     "--srcapi",
+            //     "v3"
+            // ]
             "args": [
-                "http://gitlab.app.com",
-                "CYJ7P97ssR6pACMRC_aw",
-                "http://192.168.20.202",
-                "CYJ7P97ssR6pACMRC_aw",
-                "G:\\temp\\git_root",
-                "--srcapi",
-                "v3"
+                "D:\\repository\\TxxyAndroid"
             ]
         },
         {
