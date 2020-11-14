@@ -54,7 +54,7 @@ def test_upload_apk_with_protected():
     source_name = '5.1.5beta_t_01-702-20200930_sec.apk'
     ver_env = 'test'
     prj_code_ver = '319e2dd5f6a7043fde8770a08079fe26f0d65d92'
-    app_code = 'txxy'
+    app_code = 'pyzx'
 
     to_upload_path = r'D:\auto_build\pytxxy\output\test\20200930_142454'
     mobile_os = 'Android'
