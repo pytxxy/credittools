@@ -9,6 +9,7 @@ import creditutils.str_util as str_utils
 import creditutils.exec_cmd as exec_cmd
 from datetime import datetime
 import push_tag as pod_tag
+import sys
 
 class BuildConfigParser(build_base.BuildConfigParser):
     pass
@@ -22,7 +23,12 @@ class BuildManager(build_base.BuildManager):
             if self.to_push_pod_tag:
                 podfile_path = self.pods_path + os.sep + 'Podfile'
                 podfile_path = myfile.normalpath(podfile_path)
-                pod_tag.push_pod_tag_to_remote(self.work_path, podfile_path, ['PYCategory', 'PYLibrary', 'PYTXXYBaseModule', 'PYAccountManager', 'PYPersonIdentify'], self.branch_dict, self.tag_dict)
+                try:
+                    pod_tag.push_pod_tag_to_remote(self.work_path, podfile_path, ['PYCategory', 'PYLibrary', 'PYTXXYBaseModule', 'PYAccountManager', 'PYPersonIdentify'], self.branch_dict, self.tag_dict)
+                except Exception as e:
+                    print('push error')
+                    sys.exit(0)
+
 
 
             # 执行"pod install"下载新增的库配置,在执行pod update更新相关的库
