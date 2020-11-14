@@ -29,8 +29,10 @@ def test_download_apk():
     ftp_download.Manager.download_sftp_file(ftp_config_path, local_dir_path, ver_name)
 
 def test_download_apk_with_other_channel():
-    ftp_config_path = r'D:\auto_build\release_apk\config\sftp_config.xml'
-    local_dir_path=r'D:\auto_build\release_apk\apk\txxy\5.1.8\google'
+    # ftp_config_path = r'D:\auto_build\release_apk\config\sftp_config.xml'
+    # local_dir_path=r'D:\auto_build\release_apk\apk\txxy\5.1.8\google'
+    ftp_config_path = '/data/android/auto_build/pytxxy/config/base/sftp_config.xml'
+    local_dir_path='/data/temp/apk/5.1.8/google'
     ver_name = '5.1.8'
     channel='google'
     
@@ -39,7 +41,7 @@ def test_download_apk_with_other_channel():
     print(f'ver_name: {ver_name}')
     print(f'channel: {channel}')
 
-    ftp_download.Manager.download_sftp_file(ftp_config_path, local_dir_path, ver_name, channel=channel)
+    ftp_download.Manager.download_sftp_file(ftp_config_path, local_dir_path, ver_name, channel=channel, debug=True)
 
 def test_download_apk_with_ver_no():
     ftp_config_path = r'D:\auto_build\release_apk\config\sftp_config.xml'
