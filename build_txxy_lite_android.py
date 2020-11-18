@@ -592,6 +592,7 @@ class BuildManager:
 
         keystore = os.path.join(main_prj_path, self.pro_build_config[BuilderLabel.SIGNER_FLAG][
             BuilderLabel.KEYSTORE_FLAG])
+        keystore = os.path.abspath(keystore)
         storepass = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREPASS_FLAG]
         storealias = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREALIAS_FLAG]
         signed_path = apk.get_default_signed_path(protected_path)
