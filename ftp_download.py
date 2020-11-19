@@ -42,13 +42,13 @@ class Manager:
         self.sftp_root_tag = sftp_root_tag
         self.mobile_os = mobile_os
 
-    def _download_single_file(self, sftp_cli, remote_file_path, local_file_path, force, callback=None):
+    def _download_single_file(self, sftp_cli, remote_file_path, local_file_path, force, as_file, callback=None):
         print(f'remote_file_path: {remote_file_path}')
         print(f'local_file_path: {local_file_path}')
-        sftp_handler = sftp_util.sftp_download_file(sftp_cli, remote_file_path, local_file_path, force=force, callback=callback)
+        sftp_handler = sftp_util.sftp_download_file(sftp_cli, remote_file_path, local_file_path, force=force, as_file=as_file, callback=callback)
         print(sftp_handler[1])
 
-    def _download_file(self, sftp_cli, local_dir_path, ver_no, channel, target_file_name, force):
+    def _download_file(self, sftp_cli, local_dir_path, ver_no, channel, target_file_name, force, as_file):
         env_info = self.config_data[ConfigLabel.ENV_FLAG]
         remote_root_dir = self.config_data[ConfigLabel.SFTP_PATH_FLAG]
         remote_dir = os.path.join(remote_root_dir[self.sftp_root_tag], self.ver_name, env_info[self.ver_env])
@@ -80,9 +80,9 @@ class Manager:
                     callback = monitor.feedback
                 else:
                     callback = None
-                self._download_single_file(sftp_cli, remote_file_path, local_file_path, force, callback=callback)
+                self._download_single_file(sftp_cli, remote_file_path, local_file_path, force, as_file, callback=callback)
 
-    def download_file(self, local_dir_path, ver_no='', channel='', target_file_name='', force=True):
+    def download_file(self, local_dir_path, ver_no='', channel='', target_file_name='', force=True, as_file=True):
         """
         :param ver_env: 构建环境
         :param sftp_root_tag 默认txxy
@@ -98,7 +98,7 @@ class Manager:
             print(sftp_handler[1])
             sftp_cli = sftp_handler[2]
 
-            self._download_file(sftp_cli, local_dir_path, ver_no, channel, target_file_name, force)
+            self._download_file(sftp_cli, local_dir_path, ver_no, channel, target_file_name, force, as_file)
 
             sftp_cli.close()
         else:
@@ -106,7 +106,7 @@ class Manager:
 
     @staticmethod
     def download_sftp_file(sftp_config_path, local_dir_path, ver_name, ver_env='pro', sftp_root_tag='txxy', mobile_os='Android',
-                    ver_no='', channel='', target_file_name='', force=True, debug=False):
+                    ver_no='', channel='', target_file_name='', force=True, as_file=True, debug=False):
         """
             :param sftp_config_path: sftp 配置文件路径
             :param local_dir_path: 下载文件存放路径
@@ -121,4 +121,4 @@ class Manager:
         """
         manager = Manager(sftp_config_path, debug=debug)
         manager.init_path_config(ver_name, ver_env=ver_env, sftp_root_tag=sftp_root_tag, mobile_os=mobile_os)
-        manager.download_file(local_dir_path, ver_no=ver_no, channel=channel, target_file_name=target_file_name, force=force)
+        manager.download_file(local_dir_path, ver_no=ver_no, channel=channel, target_file_name=target_file_name, force=force, as_file=as_file)
