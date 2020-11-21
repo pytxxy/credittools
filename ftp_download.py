@@ -43,10 +43,10 @@ class Manager:
         self.mobile_os = mobile_os
 
     def _download_single_file(self, sftp_cli, remote_file_path, local_file_path, force, as_file, callback=None):
-        print(f'remote_file_path: {remote_file_path}')
-        print(f'local_file_path: {local_file_path}')
+        # print(f'remote_file_path: {remote_file_path}')
+        # print(f'local_file_path: {local_file_path}')
         sftp_handler = sftp_util.sftp_download_file(sftp_cli, remote_file_path, local_file_path, force=force, as_file=as_file, callback=callback)
-        print(sftp_handler[1])
+        print(f'{sftp_handler[1]} local_file_path: {local_file_path}')
 
     def _download_file(self, sftp_cli, local_dir_path, ver_no, channel, target_file_name, force, as_file):
         env_info = self.config_data[ConfigLabel.ENV_FLAG]
