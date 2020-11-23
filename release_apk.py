@@ -34,6 +34,8 @@ class ConfigLabel:
     CHANNEL_FLAG = 'channel'
     ZIP_FLAG = 'zip'
 
+    BUCKET_FLAG = 'bucket'
+
 
 class ConfigParser:
     def __init__(self, config_path):
@@ -163,15 +165,59 @@ class Generator:
 
 
 class Uploader:
-    def __init__(self, args):
-        pass
+    def __init__(self, work_path, app_code, ver_name):
+        self.work_path = os.path.abspath(work_path)
+        self.app_code = app_code
+        self.ver_name = ver_name
+        self.common_config = None
+        self.upload_config = None
+
+    def _parse_base_config(self):
+        # 解析common配置
+        config_dirs = ['config', 'common.xml']
+        config_path = os.sep.join(config_dirs)
+        common_config_path = os.path.join(self.work_path, config_path)
+        self.common_config = ConfigParser.parse_config(common_config_path)
+
+        # 解析upload配置
+        config_dirs = ['config', 'upload_config.xml']
+        config_path = os.sep.join(config_dirs)
+        upload_config_path = os.path.join(self.work_path, config_path)
+        self.upload_config = ConfigParser.parse_config(upload_config_path)
+
     def process(self):
+        self._parse_base_config()
+        self._upload_dir(ConfigLabel.CHANNEL_FLAG)
+        self._upload_dir(ConfigLabel.ZIP_FLAG)
+
+    def _upload_dir(self, tag):
+        src_relative_path = self.common_config[ConfigLabel.TARGET_PATH_FLAG]
+        apk_root_path = os.path.join(self.work_path, src_relative_path, self.app_code, self.ver_name)
+        apk_root_path = file_util.normalpath(apk_root_path)
+        tag_relative = self.common_config[ConfigLabel.RELATIVE_FLAG][tag]
+        apk_tag_path = os.path.join(apk_root_path, tag_relative)
+        apk_tag_path = file_util.normalpath(apk_tag_path)
+
+        bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
+        tag_relative = self.upload_config[ConfigLabel.RELATIVE_FLAG][self.app_code][tag]
+        if tag_relative:
+            bucket_path = bucket + file_util.unix_sep + tag_relative
+        else:
+            bucket_path = bucket
+
+        if not bucket_path.endswith(file_util.unix_sep):
+            bucket_path = bucket_path + file_util.unix_sep
+
+        self.upload_dir(apk_tag_path, bucket_path)
+
+    def upload_dir(self, src_dir, dst_path):
         # example: ossutil cp F:\apk\pyqx\1.0.6\channel_to_upload oss://txxyapk/pyqx/ -r -f
         # cmd_str = f'ossutil cp {} {} -r -f'
-        cmd_str = ''
+        cmd_str = f'ossutil cp {src_dir} {dst_path} -r -f'
         cp = subprocess.run(cmd_str, check=True, shell=True)
         if cp.returncode != 0:
-            raise Exception(f'returncode: {cp.returncode}')
+            raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
+
 
 class Notifier:
     def __init__(self, args):

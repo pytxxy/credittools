@@ -29,8 +29,22 @@ def test_generator_run():
     generator = release_apk.Generator(work_path, app_code, ver_name)
     generator.process()
 
+
+def test_uploader_run():
+    work_path = r'D:\auto_build\release_apk'
+    app_code = 'txxy'
+    ver_name = '5.1.8'
+    
+    print(f'work_path: {work_path}')
+    print(f'app_code: {app_code}')
+    print(f'ver_name: {ver_name}')
+    uploader = release_apk.Uploader(work_path, app_code, ver_name)
+    uploader.process()
+
+
 def test_main():
-    test_generator_run()
+    # test_generator_run()
+    test_uploader_run()
     
 
 if __name__ == "__main__":
