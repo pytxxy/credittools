@@ -1,7 +1,7 @@
 import unittest
 import os
 import ftp_download
-import creditutils.utility_util as util
+import creditutils.trivial_util as util
 
 
 class Test(unittest.TestCase):

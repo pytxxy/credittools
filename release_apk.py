@@ -9,14 +9,17 @@ import os
 import git
 import time
 import subprocess
+import xmltodict
 
 import creditutils.file_util as file_util
-import creditutils.utility_util as util
+import creditutils.trivial_util as util
 import update_apk_channel as updater
 import creditutils.exec_cmd as exec_cmd
 
 from ftp_download import Manager as download_manager
 import update_apk_channel
+import pack_subdir_file
+
 
 '''
 进行Android应用发布操作。
@@ -27,8 +30,9 @@ APK_SUFFIX = '.apk'
 class ConfigLabel:
     ROOT_FLAG = 'config'
     TARGET_PATH_FLAG = 'target_path'
-    CHANNEL_FLAG = 'channel'
     RELATIVE_FLAG = 'relative'
+    CHANNEL_FLAG = 'channel'
+    ZIP_FLAG = 'zip'
 
 
 class ConfigParser:
@@ -37,7 +41,7 @@ class ConfigParser:
 
     def parse(self):
         doc = xmltodict.parse(file_util.read_file_content(self.config_path))
-        self.data = doc[BuildConfigLabel.ROOT_FLAG]
+        self.data = doc[ConfigLabel.ROOT_FLAG]
 
     def get_config(self):
         return self.data
@@ -45,15 +49,16 @@ class ConfigParser:
     @staticmethod
     def parse_config(config_path):
         parser = ConfigParser(config_path)
-        return parser.parse()
+        parser.parse()
+
+        return parser.get_config()
 
 
 class Generator:
     def __init__(self, work_path, app_code, ver_name):
-        self.work_path = os.path.abspath(self.work_path)
+        self.work_path = os.path.abspath(work_path)
         self.app_code = app_code
         self.ver_name = ver_name
-        self.sftp_config = None
         self.common_config = None
         self.apk_root_path = None
 
@@ -62,7 +67,6 @@ class Generator:
         config_dirs = ['config', 'sftp_config.xml']
         config_path = os.sep.join(config_dirs)
         self.sftp_config_path = os.path.join(self.work_path, config_path)
-        self.sftp_config = ConfigParser.parse_config(self.sftp_config_path)
 
         # 解析common配置
         config_dirs = ['config', 'common.xml']
@@ -78,12 +82,16 @@ class Generator:
         self.apk_root_path = os.path.join(self.work_path, target_path, self.app_code, self.ver_name)
         self.apk_root_path = file_util.normalpath(self.apk_root_path)
         
-        channel_relative = self.common_config[ConfigLabel.CHANNEL_FLAG]
+        channel_relative = self.common_config[ConfigLabel.RELATIVE_FLAG][ConfigLabel.CHANNEL_FLAG]
         self.apk_channel_path = os.path.join(self.apk_root_path, channel_relative)
         self.apk_channel_path = file_util.normalpath(self.apk_channel_path)
 
+        zip_relative = self.common_config[ConfigLabel.RELATIVE_FLAG][ConfigLabel.ZIP_FLAG]
+        self.zip_channel_path = os.path.join(self.apk_root_path, zip_relative)
+        self.zip_channel_path = file_util.normalpath(self.zip_channel_path)
+
         # 从sftp服务器下载通用apk文件
-        download_manager.download_sftp_file(self.ftp_config_path, self.apk_root_path, self.ver_name, sftp_root_tag=self.app_code)
+        download_manager.download_sftp_file(self.sftp_config_path, self.apk_root_path, self.ver_name, sftp_root_tag=self.app_code, as_file=False)
 
         # 使用下载的apk文件生成渠道包
         self.generate_channel_apk()
@@ -117,7 +125,7 @@ class Generator:
         update_apk_channel.batch_update_channel(src_apk_path, self.apk_channel_path, config_path)
 
     def _download_single_exceptional_apk(self, channel):
-        download_manager.download_sftp_file(self.ftp_config_path, self.apk_channel_path, self.ver_name, sftp_root_tag=self.app_code, channel=channel)
+        download_manager.download_sftp_file(self.sftp_config_path, self.apk_channel_path, self.ver_name, sftp_root_tag=self.app_code, channel=channel, as_file=False)
     
     def download_exceptional_apk(self):
         config_path_array = ['config', 'channel', self.app_code, 'exception.txt']
@@ -125,16 +133,33 @@ class Generator:
         config_path = os.path.join(self.work_path, config_relative_path)
         
         # 读取全部渠道信息
-        parser = update_apk_channel.ConfigParser(config_file)
+        parser = update_apk_channel.ConfigParser(config_path)
         parser.parse()
         channels = parser.get_config()
         if os.path.isfile(config_path):
             for channel in channels:
                 self._download_single_exceptional_apk(channel)
 
-        def zip_channel_apk(self):
-            # 可以考虑增加一个中间转换类，然后将该中间转换类的实例作参数进行传递
-            pass
+    def _get_zip_pre_name(self):
+        app_version_digits = self.ver_name.replace('.', '')
+        name_pre = f'{self.app_code}{app_version_digits}apk'
+        return name_pre
+
+
+    def zip_channel_apk(self):
+        para_dict = dict()
+        para_dict['src'] = self.apk_channel_path
+        para_dict['dst'] = self.zip_channel_path
+        para_dict['name_pre'] = self._get_zip_pre_name()
+
+        config_path_array = ['config', 'channel', self.app_code, 'to_pack.txt']
+        config_relative_path = os.sep.join(config_path_array)
+        config_path = os.path.join(self.work_path, config_relative_path)
+        para_dict['config'] = config_path
+        para_dict['max_size'] = '200M'  # 控制在200M以内
+        para_dict['max_num'] = None
+        para_obj = util.get_dict_obj(para_dict)
+        pack_subdir_file.main(para_obj)
 
 
 class Uploader:
@@ -142,7 +167,8 @@ class Uploader:
         pass
     def process(self):
         # example: ossutil cp F:\apk\pyqx\1.0.6\channel_to_upload oss://txxyapk/pyqx/ -r -f
-        cmd_str = f'ossutil cp {} {} -r -f'
+        # cmd_str = f'ossutil cp {} {} -r -f'
+        cmd_str = ''
         cp = subprocess.run(cmd_str, check=True, shell=True)
         if cp.returncode != 0:
             raise Exception(f'returncode: {cp.returncode}')
