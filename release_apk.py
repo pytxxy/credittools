@@ -19,6 +19,7 @@ import creditutils.exec_cmd as exec_cmd
 from ftp_download import Manager as download_manager
 import update_apk_channel
 import pack_subdir_file
+import creditutils.mail_util as mail_util
 
 
 '''
@@ -35,6 +36,17 @@ class ConfigLabel:
     ZIP_FLAG = 'zip'
 
     BUCKET_FLAG = 'bucket'
+    DOMAIN_FLAG = 'domain'
+    OFFICIAL_FLAG = 'official'
+
+    HOST_FLAG = 'host'
+    PORT_FLAG = 'port'
+    EMAIL_FLAG = 'email'
+    NAME_FLAG = 'name'
+    PASSWD_FLAG = 'passwd'
+
+    RECEIVER_FLAG = 'receiver'
+    CC_FLAG = 'cc'
 
 
 class ConfigParser:
@@ -172,6 +184,8 @@ class Uploader:
         self.common_config = None
         self.upload_config = None
 
+        self._parse_base_config()
+
     def _parse_base_config(self):
         # 解析common配置
         config_dirs = ['config', 'common.xml']
@@ -186,18 +200,19 @@ class Uploader:
         self.upload_config = ConfigParser.parse_config(upload_config_path)
 
     def process(self):
-        self._parse_base_config()
         self._upload_dir(ConfigLabel.CHANNEL_FLAG)
         self._upload_dir(ConfigLabel.ZIP_FLAG)
 
-    def _upload_dir(self, tag):
+    def _get_src_path(self, tag):
         src_relative_path = self.common_config[ConfigLabel.TARGET_PATH_FLAG]
         apk_root_path = os.path.join(self.work_path, src_relative_path, self.app_code, self.ver_name)
         apk_root_path = file_util.normalpath(apk_root_path)
         tag_relative = self.common_config[ConfigLabel.RELATIVE_FLAG][tag]
         apk_tag_path = os.path.join(apk_root_path, tag_relative)
         apk_tag_path = file_util.normalpath(apk_tag_path)
-
+        return apk_tag_path
+    
+    def _get_bucket_path(self, tag):
         bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
         tag_relative = self.upload_config[ConfigLabel.RELATIVE_FLAG][self.app_code][tag]
         if tag_relative:
@@ -208,6 +223,11 @@ class Uploader:
         if not bucket_path.endswith(file_util.unix_sep):
             bucket_path = bucket_path + file_util.unix_sep
 
+        return bucket_path
+
+    def _upload_dir(self, tag):
+        apk_tag_path = self._get_src_path(tag)
+        bucket_path = self._get_bucket_path(tag)
         self.upload_dir(apk_tag_path, bucket_path)
 
     def upload_dir(self, src_dir, dst_path):
@@ -218,12 +238,126 @@ class Uploader:
         if cp.returncode != 0:
             raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
 
+    def get_zip_uploaded_list(self):
+        tag = ConfigLabel.ZIP_FLAG
+        apk_tag_path = self._get_src_path(tag)
+        bucket_path = self._get_bucket_path(tag)
+        bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
+        domain = self.upload_config[ConfigLabel.DOMAIN_FLAG]
+        domain_path = bucket_path.replace(bucket, domain)
+        result = list()
+        file_list = os.listdir(apk_tag_path)
+        for filename in file_list:
+            if filename.endswith('.zip'):
+                temp_file_path = os.path.join(apk_tag_path, filename)
+                if os.path.isfile(temp_file_path):
+                    domain_file_path = domain_path + filename
+                    result.append(domain_file_path)
+
+        return result
+        
+    def get_official_addr(self):
+        tag = ConfigLabel.CHANNEL_FLAG
+        bucket_path = self._get_bucket_path(tag)
+        bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
+        domain = self.upload_config[ConfigLabel.DOMAIN_FLAG]
+        domain_path = bucket_path.replace(bucket, domain)
+        official = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
+        return domain_path + official
+
 
 class Notifier:
-    def __init__(self, args):
-        pass
-    def process(self):
-        pass
+    def __init__(self, work_path, app_code, ver_name):
+        self.work_path = os.path.abspath(work_path)
+        self.app_code = app_code
+        self.ver_name = ver_name
+        self.sender = None
+        self.common_config = None
+        self.sender_config = None
+        self.upgrade_receiver = None
+        self.publish_receiver = None
+
+        self.init_config()
+
+    def _parse_base_config(self):
+        # 解析common配置
+        config_dirs = ['config', 'common.xml']
+        config_path = os.sep.join(config_dirs)
+        common_config_path = os.path.join(self.work_path, config_path)
+        self.common_config = ConfigParser.parse_config(common_config_path)
+
+        # 解析邮件发送者信息的配置
+        config_dirs = ['config', 'sender_config.xml']
+        config_path = os.sep.join(config_dirs)
+        sender_config_path = os.path.join(self.work_path, config_path)
+        self.sender_config = ConfigParser.parse_config(sender_config_path)
+
+        # 解析发送给配置升级人员的配置
+        config_dirs = ['config', 'upgrade_receiver.xml']
+        config_path = os.sep.join(config_dirs)
+        upgrade_receiver_path = os.path.join(self.work_path, config_path)
+        self.upgrade_receiver = ConfigParser.parse_config(upgrade_receiver_path)
+
+        # 解析发送给运营人员的相关配置
+        config_dirs = ['config', 'publish_receiver.xml']
+        config_path = os.sep.join(config_dirs)
+        publish_receiver_path = os.path.join(self.work_path, config_path)
+        self.publish_receiver = ConfigParser.parse_config(publish_receiver_path)
+
+    def init_sender(self):
+        mail_host = self.sender_config[ConfigLabel.HOST_FLAG]
+        mail_port = self.sender_config[ConfigLabel.PORT_FLAG]
+        mail_sender = self.sender_config[ConfigLabel.EMAIL_FLAG]
+        mail_name = self.sender_config[ConfigLabel.NAME_FLAG]
+        mail_passwd = self.sender_config[ConfigLabel.PASSWD_FLAG]
+        self.sender = mail_util.SenderProcess(mail_host, mail_sender, mail_passwd, port=mail_port, name=mail_name)
+
+    def init_config(self):
+        self._parse_base_config()
+        self.init_sender()
+
+    def parse_receiver(self, config_data):
+        if not config_data:
+            raise Exception('config_data is empty!')
+
+        if ConfigLabel.RELATIVE_FLAG not in config_data:
+            raise Exception('receiver not exists in config_data!')
+
+        receivers = list()
+        receiver_obj = config_data[ConfigLabel.RELATIVE_FLAG]
+        if isinstance(receiver_obj, list):
+            receivers.extend(receiver_obj)
+        else:
+            receivers.append(receiver_obj)
+
+        ccs = list()
+        if ConfigLabel.CC_FLAG in config_data:
+            cc_obj = config_data[ConfigLabel.CC_FLAG]
+            if isinstance(cc_obj, list):
+                ccs.extend(cc_obj)
+            else:
+                ccs.append(cc_obj)
+
+        return receivers, ccs
+
+    # 通知测试人员配置升级
+    def notify_to_upgrade(self):
+        subject = '纯粹只是测试'
+        content = '''您好：
+                这只是测试，请忽略此邮件信息！
+        '''
+        receivers, ccs = self.parse_receiver(self.upgrade_receiver)
+        self.sender.send_mail(subject, content, receivers, ccs=ccs)
+    
+    # 通知运营人员在各大应用市场发布渠道包
+    def notify_to_publish(self):
+        subject = '纯粹只是测试'
+        content = '''您好：
+                这只是测试，请忽略此邮件信息！
+        '''
+        receivers, ccs = self.parse_receiver(self.publish_receiver)
+        self.sender.send_mail(subject, content, receivers, ccs=ccs)
+
 
 class Manager:
     HEAD_NAME = 'HEAD'
@@ -238,6 +372,7 @@ class Manager:
     def process(self):
         # 生成渠道包
         if self.to_generate:
+            # 每次只保留本地最近的三个版本，其他的版本要优先清理掉
             # 如果本地已经有相应目录，则先清空
             # 生成渠道包
             # 生成渠道包压缩包，便于运营同事使用
