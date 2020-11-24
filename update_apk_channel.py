@@ -9,6 +9,7 @@ Created on 2015年11月19日
 import argparse
 import os
 import subprocess
+import platform
 
 import creditutils.file_util as file_util
 
@@ -31,7 +32,13 @@ def batch_update_channel(src_path, dst_dir, config_file):
         # apk_items = apk_util.get_apk_info(src_path)
         if os.path.isfile(config_file):
             # 先进行批量处理
-            _CMD_FORMAT = 'walle.bat batch -f {} {} {}'
+            _system = platform.system()
+            if _system == 'Windows':
+                _CMD_FORMAT = 'walle.bat batch -f {} {} {}'
+            elif _system == 'Linux':
+                _CMD_FORMAT = 'walle.sh batch -f {} {} {}'
+            else:
+                _CMD_FORMAT = 'walle.sh batch -f {} {} {}'
             to_run_cmd = _CMD_FORMAT.format(config_file, src_path, dst_dir)
             subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
 

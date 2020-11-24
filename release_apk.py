@@ -6,7 +6,6 @@
 '''
 import argparse
 import os
-import git
 import time
 import subprocess
 import xmltodict
@@ -417,7 +416,7 @@ def main(args):
 
 # 对输入参数进行解析，设置相应参数
 def get_args(src_args=None):
-    parser = argparse.ArgumentParser(description='synchronize git repository with remote if need.')
+    parser = argparse.ArgumentParser(description='to release apk.')
     # 版本名称，如5.1.2
     parser.add_argument('ver_name', metavar='ver_name', help='version name')
     # 工作目录
