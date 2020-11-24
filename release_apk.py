@@ -67,7 +67,10 @@ class ConfigParser:
 
         return parser.get_config()
 
-
+# 每次只保留当前App本地最近的三个版本，其他的版本要优先清理掉
+# 如果本地已经有相应目录，则先清空
+# 生成渠道包
+# 生成渠道包压缩包，便于运营同事使用
 class Generator:
     def __init__(self, work_path, app_code, ver_name):
         self.work_path = os.path.abspath(work_path)
@@ -231,6 +234,13 @@ class Uploader:
         self.upload_dir(apk_tag_path, bucket_path)
 
     def upload_dir(self, src_dir, dst_path):
+        if not os.path.isdir(src_dir):
+            raise Exception(f'{src_dir} directory not exist!')
+
+        file_list = os.listdir(src_dir)
+        if len(file_list) <= 0:
+            raise Exception(f'{src_dir} directory is empty!')
+
         # example: ossutil cp F:\apk\pyqx\1.0.6\channel_to_upload oss://txxyapk/pyqx/ -r -f
         # cmd_str = f'ossutil cp {} {} -r -f'
         cmd_str = f'ossutil cp {src_dir} {dst_path} -r -f'
@@ -277,7 +287,7 @@ class Notifier:
         self.upgrade_receiver = None
         self.publish_receiver = None
 
-        self.init_config()
+        self._init_config()
 
     def _parse_base_config(self):
         # 解析common配置
@@ -304,7 +314,7 @@ class Notifier:
         publish_receiver_path = os.path.join(self.work_path, config_path)
         self.publish_receiver = ConfigParser.parse_config(publish_receiver_path)
 
-    def init_sender(self):
+    def _init_sender(self):
         mail_host = self.sender_config[ConfigLabel.HOST_FLAG]
         mail_port = self.sender_config[ConfigLabel.PORT_FLAG]
         mail_sender = self.sender_config[ConfigLabel.EMAIL_FLAG]
@@ -312,19 +322,19 @@ class Notifier:
         mail_passwd = self.sender_config[ConfigLabel.PASSWD_FLAG]
         self.sender = mail_util.SenderProcess(mail_host, mail_sender, mail_passwd, port=mail_port, name=mail_name)
 
-    def init_config(self):
+    def _init_config(self):
         self._parse_base_config()
-        self.init_sender()
+        self._init_sender()
 
     def parse_receiver(self, config_data):
         if not config_data:
             raise Exception('config_data is empty!')
 
-        if ConfigLabel.RELATIVE_FLAG not in config_data:
+        if ConfigLabel.RECEIVER_FLAG not in config_data:
             raise Exception('receiver not exists in config_data!')
 
         receivers = list()
-        receiver_obj = config_data[ConfigLabel.RELATIVE_FLAG]
+        receiver_obj = config_data[ConfigLabel.RECEIVER_FLAG]
         if isinstance(receiver_obj, list):
             receivers.extend(receiver_obj)
         else:
@@ -341,19 +351,27 @@ class Notifier:
         return receivers, ccs
 
     # 通知测试人员配置升级
-    def notify_to_upgrade(self):
-        subject = '纯粹只是测试'
-        content = '''您好：
-                这只是测试，请忽略此邮件信息！
+    def notify_to_upgrade(self, addr):
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        subject = f'{app_name} {self.ver_name}可以配置升级了'
+        content = f'''您好：
+          {app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请配置{app_name}的升级，apk包下载链接如下：
+        {addr}
+
         '''
         receivers, ccs = self.parse_receiver(self.upgrade_receiver)
         self.sender.send_mail(subject, content, receivers, ccs=ccs)
     
     # 通知运营人员在各大应用市场发布渠道包
-    def notify_to_publish(self):
-        subject = '纯粹只是测试'
-        content = '''您好：
-                这只是测试，请忽略此邮件信息！
+    def notify_to_publish(self, addr_list):
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        # target_list = map(lambda x: ' '*4 + x, addr_list)
+        target_str = '\r\n'.join(addr_list)
+        subject = f'{app_name} {self.ver_name}可以上传到应用市场了'
+        content = f'''您好：
+          {app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请在各应用市场上架{app_name}的新版本，apk渠道压缩包下载链接如下：
+        {target_str}
+
         '''
         receivers, ccs = self.parse_receiver(self.publish_receiver)
         self.sender.send_mail(subject, content, receivers, ccs=ccs)
@@ -372,19 +390,24 @@ class Manager:
     def process(self):
         # 生成渠道包
         if self.to_generate:
-            # 每次只保留本地最近的三个版本，其他的版本要优先清理掉
-            # 如果本地已经有相应目录，则先清空
-            # 生成渠道包
-            # 生成渠道包压缩包，便于运营同事使用
-            pass
+            generator = Generator(self.work_path, self.app_code, self.ver_name)
+            generator.process()
 
         # 上传渠道包、渠道压缩包至阿里云
+        uploader = Uploader(self.work_path, self.app_code, self.ver_name)
         if self.to_upload:
-            pass
+            uploader.process()
 
-        # 发邮件通知相关人员
+        # 发邮件通知相关人员配置官网升级
+        notifier = Notifier(self.work_path, self.app_code, self.ver_name)
+        if self.to_update_official:
+            addr = uploader.get_official_addr()
+            notifier.notify_to_upgrade(addr)
+
+        # 发邮件通知相关人员上架到各应用市场
         if self.to_notify:
-            pass
+            addr_list = uploader.get_zip_uploaded_list()
+            notifier.notify_to_publish(addr_list)
 
 
 def main(args):
@@ -406,15 +429,16 @@ def get_args(src_args=None):
     # 是否进行生成渠道包的操作
     parser.add_argument('-g', dest='to_generate', action='store_true', default=False, help='indicate to generate channel apk')
 
-    # 是否进行发送官网升级包的操作
-    parser.add_argument('--official', dest='to_update_official', action='store_true', default=False, help='indicate to update official apk')
-
     # 是否上传到阿里云
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
                         help='indicate to upload channel files and zipped files')
-    # 是否发邮件通知给相关人员
+    
+    # 是否进行发送官网升级包的操作
+    parser.add_argument('--official', dest='to_update_official', action='store_true', default=False, help='indicate to update official apk')
+    
+    # 是否发邮件通知给相关人员配置升级
     parser.add_argument('--notify', dest='to_notify', action='store_true', default=False,
-                        help='indicate to notify relevant personnel')
+                        help='indicate to notify relevant personnel to publish app in application market')
 
     #     parser.print_help()
 

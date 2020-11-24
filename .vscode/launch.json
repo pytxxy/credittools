@@ -19,8 +19,16 @@
             //     "--srcapi",
             //     "v3"
             // ]
+            // "args": [
+            //     "D:\\repository\\TxxyAndroid"
+            // ]
             "args": [
-                "D:\\repository\\TxxyAndroid"
+                "-g",
+                "--upload",
+                "--official",
+                "--notify",
+                "5.1.8",
+                "D:\\auto_build\\release_apk"
             ]
         },
         {
