@@ -148,11 +148,10 @@ class Generator:
         config_relative_path = os.sep.join(config_path_array)
         config_path = os.path.join(self.work_path, config_relative_path)
         
-        # 读取全部渠道信息
-        parser = update_apk_channel.ConfigParser(config_path)
-        parser.parse()
-        channels = parser.get_config()
         if os.path.isfile(config_path):
+            parser = update_apk_channel.ConfigParser(config_path)
+            parser.parse()
+            channels = parser.get_config()
             for channel in channels:
                 self._download_single_exceptional_apk(channel)
 
