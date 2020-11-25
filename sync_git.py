@@ -27,6 +27,14 @@ def measure_time(func, *args, **dicts):
     # 输出总用时
     print('===Finished. Total time: {}==='.format(time_info))
 
+def is_repository(_dir='.'):
+    try:
+        _dir = os.path.abspath(_dir)
+        _ = git.Repo(_dir).git_dir
+        return True
+    except git.exc.InvalidGitRepositoryError:
+        return False
+
 class Manager:
     HEAD_NAME = 'HEAD'
     def __init__(self, args):
@@ -38,8 +46,27 @@ class Manager:
         self.work_path = os.path.abspath(self.work_path)
 
     def process(self):
+        if not os.path.isdir(self.work_path):
+            raise Exception(f'{self.work_path} is not a directory!')
+
+        if is_repository(self.work_path):
+            self.sync_repo(self.work_path)
+        else:
+            self.sync_repo_recursive(self.work_path)
+
+    def sync_repo_recursive(self, repo_path):
+        file_list = os.listdir(repo_path)
+        for filename in file_list:
+            temp_file_path = os.path.join(repo_path, filename)
+            if os.path.isdir(temp_file_path):
+                if is_repository(temp_file_path):
+                    self.sync_repo(temp_file_path)
+                else:
+                    self.sync_repo_recursive(temp_file_path)
+    
+    def sync_repo(self, repo_path):
         # 先更新git仓库信息
-        repo = git.Repo(self.work_path)
+        repo = git.Repo(repo_path)
         repo.git.fetch(all=True)
 
         # 先获取远程分支信息以及本地分支信息
