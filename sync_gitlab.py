@@ -5,11 +5,12 @@ import requests
 import shutil
 import subprocess
 import pprint
+import git
 import creditutils.trivial_util as trivial_util
 import creditutils.file_util as file_util
 import creditutils.exec_cmd as exec_cmd
 import gitlab
-import creditutils.git_util as git
+import creditutils.git_util as git_util
 import sync_git
 
 # 设计思路说明：
@@ -50,8 +51,8 @@ class ProcessManager:
     def backup_project(self):
         src_items = self.get_projects_sync_item(self.src, self.src_token)
         other_info = dict()
-        # cnt_butt = 4
-        # cnt_index = 0
+        cnt_butt = 4
+        cnt_index = 0
         for k, v in src_items.items():
             path = v.path
             path_with_namespace = v.path_with_namespace
@@ -80,9 +81,9 @@ class ProcessManager:
             self.checkout(prj_path, path, code_url)
             sync_git.Manager.sync_repo(prj_git_path)
 
-            # cnt_index += 1
-            # if cnt_index >= cnt_butt:
-            #     break
+            cnt_index += 1
+            if cnt_index >= cnt_butt:
+                break
 
         print('need manual operation items:')
         pprint.pprint(other_info)
@@ -215,57 +216,16 @@ class ProcessManager:
         print('need manual operation items:')
         pprint.pprint(other_info)
 
-    def sync_project_support_v3(self):
-        src_items = self.get_projects_sync_item_support_v3(self.src, self.src_token, self.src_api)
-        dst_items = self.get_projects_sync_item_support_v3(self.dst, self.dst_token, self.dst_api)
-        other_info = dict()
-        for k, v in src_items.items():
-            if k in dst_items:
-                path = v[DataLabel.path]
-                path_with_namespace = v[DataLabel.path_with_namespace]
-                if not path_with_namespace.endswith(path):
-                    print(f'{path_with_namespace} not endswith {path}!')
-                    other_info[k] = v
-                    continue
-
-                relative_path = path_with_namespace[:-len(path)]
-                prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
-                root_path = file_util.normalpath(os.path.join(prj_path, path))
-                code_url = v[DataLabel.ssh_url_to_repo]
-                self.checkout(prj_path, path, code_url)
-
-                dst_item = dst_items[k]
-                rtn = self.pull_all(root_path)
-                if not rtn:
-                    other_info[k] = v
-                    continue
-
-                dst_url = dst_item[DataLabel.ssh_url_to_repo]
-                rtn = self.update_remote_url(root_path, dst_url)
-                if not rtn:
-                    other_info[k] = v
-                    continue
-
-                self.push_all_to_remote(root_path)
-            else:
-                other_info[k] = v
-
-        for k, v in dst_items.items():
-            if k not in src_items:
-                other_info[k] = v
-
-        print('need manual operation items:')
-        pprint.pprint(other_info)
-
     def checkout(self, prj_path, path, code_url, branch=None):
+        prj_git_root = os.path.join(prj_path, path)
         if not os.path.isdir(prj_path):
             os.makedirs(prj_path)
         else:
-            git_root = os.path.join(prj_path, path)
-            if os.path.isdir(git_root):
-                shutil.rmtree(git_root, ignore_errors=False)
+            if os.path.isdir(prj_git_root):
+                shutil.rmtree(prj_git_root, ignore_errors=False)
             
-        git.clone(code_url, prj_path, branch=branch)
+        # git_util.clone(code_url, prj_path, branch=branch)
+        git.Repo.clone_from(code_url, prj_git_root)
 
     def pull_all(self, root_path):
         try:
