@@ -83,24 +83,22 @@ class BuilderLabel:
     HTTPDNS_FLAG = 'httpdns'
 
     CODE_VER_FLAG = 'code_ver'
+    JPUSH_APPKEY_FLAG = 'jpush_appkey'
 
 
 class BuildCmd:
     exec_name = f'gradlew{_system_suffix}'
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
-    map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'app_code', 'for_publish',
+    basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
                'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
 
+    extend_map_key = {'API_VERSION':'api_ver', 'JPUSH_APPKEY':'jpush_appkey'}
+
     cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
+                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
                       '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
                       '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
-
-    cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} -PBUILD_FOR_GOOGLE_PLAY={for_google} ' \
-                      '-PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} -PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} ' \
-                      '-PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     def __init__(self):
         # 先初始化默认值
@@ -117,6 +115,7 @@ class BuildCmd:
         self.httpdns = str(False).lower()
         self.channel = BuilderLabel.DEFAULT_CHAN
         self.demo_label = 'normal'
+        self.jpush_appkey = None
 
     def update_value(self, info):
         # 根据给过来的配置值，更新相应值
@@ -148,10 +147,11 @@ class BuildCmd:
         self.for_google = str(info[BuilderLabel.FOR_GOOGLE_FLAG]).lower()
         self.app_name = info[BuilderLabel.APP_NAME_FLAG]
         self.channel = info[BuilderLabel.CHANNEL_FLAG]
+        self.jpush_appkey = info[BuilderLabel.JPUSH_APPKEY_FLAG]
 
-    def get_map(self):
+    def get_basic_map(self):
         rtn_map = {}
-        for item in BuildCmd.map_key:
+        for item in BuildCmd.basic_map_key:
             value = getattr(self, item)
             if value:
                 rtn_map[item] = getattr(self, item)
@@ -160,13 +160,16 @@ class BuildCmd:
 
     def get_build_cmd(self, info):
         self.update_value(info)
-        params = self.get_map()
-        if BuilderLabel.API_VER_FLAG in params:
-            cmd_format = BuildCmd.cmd_format
-        else:
-            cmd_format = BuildCmd.cmd_format_without_api_ver
+        params = self.get_basic_map()
+        cmd_str = BuildCmd.cmd_format.format(**params)
 
-        cmd_str = cmd_format.format(**params)
+        extend_map_key = BuildCmd.extend_map_key
+        for k in extend_map_key:
+            value = getattr(self, extend_map_key[k])
+            if value:
+                extend_para = f' -P{k}={value}'
+                cmd_str = cmd_str + extend_para
+
         print(cmd_str)
 
         return cmd_str
@@ -429,6 +432,7 @@ class BuildManager:
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
         params[BuilderLabel.ARM64_FLAG] = self.is_arm64
         params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
+        params[BuilderLabel.JPUSH_APPKEY_FLAG] = self.jpush_appkey
         
         # 获取网络api version配置信息
         if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:
@@ -682,6 +686,7 @@ def get_args(src_args=None):
                         choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
+    parser.add_argument('--jpush', metavar='jpush_appkey', dest='jpush_appkey', default=None, help='jpush app key')
 
     #     parser.print_help()
 
