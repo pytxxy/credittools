@@ -10,6 +10,7 @@ import creditutils.file_util as file_util
 import creditutils.exec_cmd as exec_cmd
 import gitlab
 import creditutils.git_util as git
+import sync_git
 
 # 设计思路说明：
 # 1.先遍历老的gitlab库，将所有的库罗列出来；
@@ -38,6 +39,8 @@ class ProcessManager:
             setattr(self, name, value)
         #         pprint.pprint(vars(self))
 
+        self.git_root = os.path.abspath(self.git_root)
+
     def process(self):
         if self.backup_only:
             self.backup_project()
@@ -57,13 +60,25 @@ class ProcessManager:
                 other_info[k] = v
                 continue
 
-            branches = v.branches.list()
-            for branch in branches:
-                branch_id = branch.get_id()
-                relative_path = os.path.join(path_with_namespace, branch_id)
-                prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
-                code_url = v.ssh_url_to_repo
-                self.checkout(prj_path, path, code_url, branch=branch_id)
+            # branches = v.branches.list()
+            # for branch in branches:
+            #     branch_id = branch.get_id()
+            #     relative_path = os.path.join(path_with_namespace, branch_id)
+            #     prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
+            #     code_url = v.ssh_url_to_repo
+            #     self.checkout(prj_path, path, code_url, branch=branch_id)
+
+            if path == path_with_namespace:
+                namespace = None
+                prj_path = self.git_root
+            else:
+                namespace = path_with_namespace[0:-len(path)]
+                prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
+            
+            prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
+            code_url = v.ssh_url_to_repo
+            self.checkout(prj_path, path, code_url)
+            sync_git.Manager.sync_repo(prj_git_path)
 
             # cnt_index += 1
             # if cnt_index >= cnt_butt:
@@ -72,6 +87,7 @@ class ProcessManager:
         print('need manual operation items:')
         pprint.pprint(other_info)
 
+    # 有待实际验证效果
     def sync_project(self):
         src_items = self.get_projects_sync_item(self.src, self.src_token)
         dst_items = self.get_projects_sync_item(self.dst, self.dst_token)
@@ -85,28 +101,49 @@ class ProcessManager:
                     other_info[k] = v
                     continue
 
-                branches = v.branches.list()
-                for branch in branches:
-                    branch_id = branch.get_id()
-                    relative_path = os.path.join(path_with_namespace, branch_id)
-                    prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
-                    root_path = file_util.normalpath(os.path.join(prj_path, path))
-                    code_url = v.ssh_url_to_repo
-                    self.checkout(prj_path, path, code_url, branch=branch_id)
+                # branches = v.branches.list()
+                # for branch in branches:
+                #     branch_id = branch.get_id()
+                #     relative_path = os.path.join(path_with_namespace, branch_id)
+                #     prj_path = file_util.normalpath(os.path.join(self.git_root, relative_path))
+                #     root_path = file_util.normalpath(os.path.join(prj_path, path))
+                #     code_url = v.ssh_url_to_repo
+                #     self.checkout(prj_path, path, code_url, branch=branch_id)
 
-                    dst_item = dst_items[k]
-                    rtn = self.pull_all(root_path)
-                    if not rtn:
-                        other_info[k] = v
-                        continue
+                #     dst_item = dst_items[k]
+                #     rtn = self.pull_all(root_path)
+                #     if not rtn:
+                #         other_info[k] = v
+                #         continue
 
-                    dst_url = dst_item.ssh_url_to_repo
-                    rtn = self.update_remote_url(root_path, dst_url)
-                    if not rtn:
-                        other_info[k] = v
-                        continue
+                #     dst_url = dst_item.ssh_url_to_repo
+                #     rtn = self.update_remote_url(root_path, dst_url)
+                #     if not rtn:
+                #         other_info[k] = v
+                #         continue
 
-                    self.push_all_to_remote(root_path)
+                #     self.push_all_to_remote(root_path)
+
+                if path == path_with_namespace:
+                    namespace = None
+                    prj_path = self.git_root
+                else:
+                    namespace = path_with_namespace[0:-len(path)]
+                    prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
+
+                prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
+                code_url = v.ssh_url_to_repo
+                self.checkout(prj_path, path, code_url)
+                sync_git.Manager.sync_repo(prj_git_path)
+
+                dst_item = dst_items[k]
+                dst_url = dst_item.ssh_url_to_repo
+                rtn = self.update_remote_url(prj_git_path, dst_url)
+                if not rtn:
+                    other_info[k] = v
+                    continue
+
+                sync_git.Manager.push_to_remote(prj_git_path)
             else:
                 other_info[k] = v
 

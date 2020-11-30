@@ -35,6 +35,7 @@ def is_repository(_dir='.'):
     except git.exc.InvalidGitRepositoryError:
         return False
 
+
 class Manager:
     HEAD_NAME = 'HEAD'
     def __init__(self, args):
@@ -50,21 +51,22 @@ class Manager:
             raise Exception(f'{self.work_path} is not a directory!')
 
         if is_repository(self.work_path):
-            self.sync_repo(self.work_path)
+            Manager.sync_repo(self.work_path)
         else:
-            self.sync_repo_recursive(self.work_path)
+            Manager.sync_repo_recursive(self.work_path)
 
-    def sync_repo_recursive(self, repo_path):
+    @staticmethod
+    def sync_repo_recursive(repo_path):
         file_list = os.listdir(repo_path)
         for filename in file_list:
             temp_file_path = os.path.join(repo_path, filename)
             if os.path.isdir(temp_file_path):
                 if is_repository(temp_file_path):
-                    self.sync_repo(temp_file_path)
+                    Manager.sync_repo(temp_file_path)
                 else:
-                    self.sync_repo_recursive(temp_file_path)
-    
-    def sync_repo(self, repo_path):
+                    Manager.sync_repo_recursive(temp_file_path)
+    @staticmethod
+    def sync_repo(repo_path):
         # 先更新git仓库信息
         repo = git.Repo(repo_path)
         repo.git.fetch(all=True)
@@ -75,7 +77,7 @@ class Manager:
         local_branches = repo.branches
         remote_map = dict()
         for item in remote_branches:
-            pure_name = self._get_pure_name(item.name)
+            pure_name = Manager._get_pure_name(item.name)
             remote_map[pure_name] = item
 
         local_map = dict()
@@ -100,8 +102,30 @@ class Manager:
         for item in local_map:
             if item not in remote_map:
                 repo.git.branch(item, d=True)
+    
+    @staticmethod
+    def push_to_remote(repo_path):
+        # 先更新git仓库信息
+        repo = git.Repo(repo_path)
 
-    def _get_pure_name(self, whole_name):
+        # 先获取本地分支信息
+        # local_branches = repo.branches
+        # local_map = dict()
+        # for item in local_branches:
+        #     local_map[item.name] = item
+
+        # 将本地分支推送到远端。
+        # for k in local_map:
+        #     if k == repo.active_branch.name:
+        #         repo.git.push()
+        #     else:
+        #         repo.git.checkout(k)
+        #         repo.git.push()
+        
+        repo.git.push(all=True)
+
+    @staticmethod
+    def _get_pure_name(whole_name):
         if whole_name:
             str_array = whole_name.split('/')
             return str_array[-1]
