@@ -501,9 +501,8 @@ class BuildManager:
 
         return params
 
-    def _clear_output_directory(self, to_reserve=2):
-        root_dir = self.curr_env_output_root
-        print(f'_clear_output_directory, root_dir: {root_dir}.')
+    def _clear_output_directory(self, root_dir, to_reserve=2):
+        # print(f'_clear_output_directory, root_dir: {root_dir}.')
         if not os.path.isdir(root_dir):
             return
 
@@ -552,7 +551,7 @@ class BuildManager:
             # 参数非空判断验证通过开始进行正式业务逻辑
             self.pro_build_config = self._get_pro_build_config()
             # 在进行编译前先进行空间清理操作
-            self._clear_output_directory()
+            self._clear_output_directory(self.curr_env_output_root)
             self.build_app(self.pro_build_config)
 
             if os.path.exists(self.apk_output_path) and os.path.isfile(self.apk_output_path):

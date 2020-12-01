@@ -9,6 +9,7 @@ import os
 import time
 import subprocess
 import xmltodict
+import shutil
 
 import creditutils.file_util as file_util
 import creditutils.trivial_util as util
@@ -95,6 +96,7 @@ class Generator:
         self._parse_base_config()
 
         target_path = self.common_config[ConfigLabel.TARGET_PATH_FLAG]
+        self.apk_root_parent_path = os.path.join(self.work_path, target_path, self.app_code)
         self.apk_root_path = os.path.join(self.work_path, target_path, self.app_code, self.ver_name)
         self.apk_root_path = file_util.normalpath(self.apk_root_path)
         
@@ -105,6 +107,9 @@ class Generator:
         zip_relative = self.common_config[ConfigLabel.RELATIVE_FLAG][ConfigLabel.ZIP_FLAG]
         self.zip_channel_path = os.path.join(self.apk_root_path, zip_relative)
         self.zip_channel_path = file_util.normalpath(self.zip_channel_path)
+
+        # 先进行清理本地apk文件夹操作
+        self._clear_output_directory(self.apk_root_parent_path)
 
         # 从sftp服务器下载通用apk文件
         download_manager.download_sftp_file(self.sftp_config_path, self.apk_root_path, self.ver_name, sftp_root_tag=self.app_code, as_file=False)
@@ -117,6 +122,24 @@ class Generator:
 
         # 将需要外发的渠道包压缩成zip包
         self.zip_channel_apk()
+
+    def _clear_output_directory(self, root_dir, to_reserve=2):
+        # print(f'_clear_output_directory, root_dir: {root_dir}.')
+        if not os.path.isdir(root_dir):
+            return
+
+        file_list = os.listdir(root_dir)
+        length = len(file_list)
+        index = 0
+        index_butt = length - to_reserve
+        for filename in file_list:
+            if index < index_butt:
+                index += 1
+                sub_dir = os.path.join(root_dir, filename)
+                if os.path.isdir(sub_dir):
+                    shutil.rmtree(sub_dir)
+            else:
+                break
 
     def _get_source_apk(self):
         src_apk_path = None
