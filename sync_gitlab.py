@@ -51,8 +51,8 @@ class ProcessManager:
     def backup_project(self):
         src_items = self.get_projects_sync_item(self.src, self.src_token)
         other_info = dict()
-        cnt_butt = 4
-        cnt_index = 0
+        # cnt_butt = 4
+        # cnt_index = 0
         for k, v in src_items.items():
             path = v.path
             path_with_namespace = v.path_with_namespace
@@ -81,9 +81,9 @@ class ProcessManager:
             self.checkout(prj_path, path, code_url)
             sync_git.Manager.sync_repo(prj_git_path)
 
-            cnt_index += 1
-            if cnt_index >= cnt_butt:
-                break
+            # cnt_index += 1
+            # if cnt_index >= cnt_butt:
+            #     break
 
         print('need manual operation items:')
         pprint.pprint(other_info)
@@ -225,7 +225,10 @@ class ProcessManager:
                 shutil.rmtree(prj_git_root, ignore_errors=False)
             
         # git_util.clone(code_url, prj_path, branch=branch)
-        git.Repo.clone_from(code_url, prj_git_root)
+        try:
+            git.Repo.clone_from(code_url, prj_git_root)
+        except git.exc.GitCommandError as e:
+            print(str(e))
 
     def pull_all(self, root_path):
         try:
