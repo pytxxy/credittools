@@ -43,7 +43,7 @@ class Manager:
         self.sync_project()
 
     def sync_project(self):
-        src_items = self.get_projects_sync_item(self.src, self.src_token)
+        src_items = self.get_projects_sync_item(self.src, self.token)
         other_info = dict()
         # cnt_butt = 4
         # cnt_index = 0
