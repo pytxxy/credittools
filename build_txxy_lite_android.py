@@ -5,6 +5,7 @@ import time
 import re
 from enum import IntEnum
 import platform
+import shutil
 
 import ftp_upload
 import creditutils.apk_builder_util as apk_builder
@@ -362,6 +363,7 @@ class BuildManager:
         self.project_path = file_util.normalpath(ori_project_path)
 
         self.api_ver_config = None
+        self.curr_env_output_root = None
 
     def _get_whole_ver_name(self, beta_label_map, label_map):
         beta_label = 'beta'
@@ -454,6 +456,7 @@ class BuildManager:
         output_directory = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
             BuildConfigLabel.TARGET_PATH_FLAG])
         output_directory = file_util.normalpath(output_directory)
+        self.curr_env_output_root = os.path.join(output_directory, self.ver_env)
         output_directory = os.path.join(output_directory, self.ver_env, time_str)
         params[BuilderLabel.OUTPUT_DIRECTORY_FLAG] = output_directory
 
@@ -498,6 +501,25 @@ class BuildManager:
 
         return params
 
+    def _clear_output_directory(self, to_reserve=2):
+        root_dir = self.curr_env_output_root
+        print(f'_clear_output_directory, root_dir: {root_dir}.')
+        if not os.path.isdir(root_dir):
+            return
+
+        file_list = os.listdir(root_dir)
+        length = len(file_list)
+        index = 0
+        index_butt = length - to_reserve
+        for filename in file_list:
+            if index < index_butt:
+                index += 1
+                sub_dir = os.path.join(root_dir, filename)
+                if os.path.isdir(sub_dir):
+                    shutil.rmtree(sub_dir)
+            else:
+                break
+
     def process(self):
         main_prj_name = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.MAIN_FLAG]
         self.project_code_path = os.path.join(self.project_path, self.branch)
@@ -529,6 +551,8 @@ class BuildManager:
 
             # 参数非空判断验证通过开始进行正式业务逻辑
             self.pro_build_config = self._get_pro_build_config()
+            # 在进行编译前先进行空间清理操作
+            self._clear_output_directory()
             self.build_app(self.pro_build_config)
 
             if os.path.exists(self.apk_output_path) and os.path.isfile(self.apk_output_path):
