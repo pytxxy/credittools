@@ -20,6 +20,7 @@ from ftp_download import Manager as download_manager
 import update_apk_channel
 import pack_subdir_file
 import creditutils.mail_util as mail_util
+import creditutils.dingtalk_util as dingtalk_util
 
 
 '''
@@ -45,8 +46,15 @@ class ConfigLabel:
     NAME_FLAG = 'name'
     PASSWD_FLAG = 'passwd'
 
+    MAIL_FLAG = 'mail'
     RECEIVER_FLAG = 'receiver'
     CC_FLAG = 'cc'
+
+    DINGTALK_FLAG = 'dingtalk'
+    WEBHOOK_FLAG = 'webhook'
+    SECRET_FLAG = 'secret'
+    AT_FLAG = 'at'
+    MOBILE_FLAG = 'mobile'
 
 
 class ConfigParser:
@@ -66,6 +74,7 @@ class ConfigParser:
         parser.parse()
 
         return parser.get_config()
+
 
 # 每次只保留当前App本地最近的三个版本，其他的版本要优先清理掉
 # 如果本地已经有相应目录，则先清空
@@ -371,8 +380,38 @@ class Notifier:
 
         return receivers, ccs
 
+    def send_dingtalk_message(self, config, info):
+        webhook = config[ConfigLabel.WEBHOOK_FLAG]
+        secret = config[ConfigLabel.SECRET_FLAG]
+        mobile_obj = None
+        if ConfigLabel.AT_FLAG in config:
+            if ConfigLabel.MOBILE_FLAG in config[ConfigLabel.AT_FLAG]:
+                mobile_obj = config
+
+        mobiles = list()
+        if mobile_obj:
+            if isinstance(mobile_obj, list):
+                mobiles.extend(mobile_obj)
+            else:
+                mobiles.append(mobile_obj)
+
+        data = {
+            'msgtype': 'text', 
+            'text': {
+                'content': info
+            }, 
+            'at': {
+                'atMobiles': mobiles,
+                'isAtAll': False
+            }
+        }
+        rtn = dingtalk_util.send_map_data(webhook, secret, data)
+        print(rtn.text)
+
+
     # 通知测试人员配置升级
     def notify_to_upgrade(self, addr):
+        # 发送邮件通知
         app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
         subject = f'{app_name} {self.ver_name}可以配置升级了'
         content = f'''您好：
@@ -380,11 +419,16 @@ class Notifier:
         {addr}
 
         '''
-        receivers, ccs = self.parse_receiver(self.upgrade_receiver)
+        receivers, ccs = self.parse_receiver(self.upgrade_receiver[ConfigLabel.MAIL_FLAG])
         self.sender.send_mail(subject, content, receivers, ccs=ccs)
+
+        # 发送钉钉群通知
+        info = f'{app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请配置{app_name}的升级，apk包下载链接如下：{addr}'
+        self.send_dingtalk_message(self.upgrade_receiver[ConfigLabel.DINGTALK_FLAG], info)
     
     # 通知运营人员在各大应用市场发布渠道包
     def notify_to_publish(self, addr_list):
+        # 发送邮件通知
         app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
         # target_list = map(lambda x: ' '*4 + x, addr_list)
         target_str = '\r\n'.join(addr_list)
@@ -394,8 +438,12 @@ class Notifier:
         {target_str}
 
         '''
-        receivers, ccs = self.parse_receiver(self.publish_receiver)
+        receivers, ccs = self.parse_receiver(self.publish_receiver[ConfigLabel.MAIL_FLAG])
         self.sender.send_mail(subject, content, receivers, ccs=ccs)
+
+        # 发送钉钉群通知
+        info = f'{app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请在各应用市场上架{app_name}的新版本，apk渠道压缩包下载链接如下：{target_str}'
+        self.send_dingtalk_message(self.publish_receiver[ConfigLabel.DINGTALK_FLAG], info)
 
 
 class Manager:
