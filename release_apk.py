@@ -235,6 +235,7 @@ class Uploader:
     def process(self):
         self._upload_dir(ConfigLabel.CHANNEL_FLAG)
         self._upload_dir(ConfigLabel.ZIP_FLAG)
+        self.upload_official_file()
 
     def _get_src_path(self, tag):
         src_relative_path = self.common_config[ConfigLabel.TARGET_PATH_FLAG]
@@ -244,7 +245,28 @@ class Uploader:
         apk_tag_path = os.path.join(apk_root_path, tag_relative)
         apk_tag_path = file_util.normalpath(apk_tag_path)
         return apk_tag_path
+
+    def _get_official_file_path(self):
+        channel_dir_path = self._get_src_path(ConfigLabel.CHANNEL_FLAG)
+        filename = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
+        file_path = os.path.join(channel_dir_path, filename)
+        return file_path
     
+    def _get_official_target_file_name(self):
+        src_name = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
+        pure_name = src_name
+        if src_name.endswith(APK_SUFFIX):
+            pure_name = src_name[0:-len(APK_SUFFIX)]
+
+        target_name = f'{pure_name}_{self.app_code}_{self.ver_name}{APK_SUFFIX}'
+        return target_name
+
+    def _get_official_bucket_path(self):
+        bucket_dir_path = self._get_bucket_path(ConfigLabel.OFFICIAL_FLAG)
+        filename = self._get_official_target_file_name()
+        bucket_file_path = bucket_dir_path + filename
+        return bucket_file_path
+
     def _get_bucket_path(self, tag):
         bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
         tag_relative = self.upload_config[ConfigLabel.RELATIVE_FLAG][self.app_code][tag]
@@ -277,6 +299,23 @@ class Uploader:
         cp = subprocess.run(cmd_str, check=True, shell=True)
         if cp.returncode != 0:
             raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
+    
+    # 单独上传一份官方包，便于配置升级
+    def upload_official_file(self):
+        apk_file_path = self._get_official_file_path()
+        bucket_path = self._get_official_bucket_path()
+        self.upload_file(apk_file_path, bucket_path)
+
+    def upload_file(self, src_file, dst_path):
+        if not os.path.isfile(src_file):
+            raise Exception(f'{src_file} not exist!')
+
+        # example: ossutil cp F:\apk\pyqx\1.0.6\channel_to_upload\pycredit.apk oss://txxyapk/pyqx/ -f
+        # cmd_str = f'ossutil cp {} {} -f'
+        cmd_str = f'ossutil cp {src_file} {dst_path} -f'
+        cp = subprocess.run(cmd_str, check=True, shell=True)
+        if cp.returncode != 0:
+            raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
 
     def get_zip_uploaded_list(self):
         tag = ConfigLabel.ZIP_FLAG
@@ -297,13 +336,11 @@ class Uploader:
         return result
         
     def get_official_addr(self):
-        tag = ConfigLabel.CHANNEL_FLAG
-        bucket_path = self._get_bucket_path(tag)
+        bucket_path = self._get_official_bucket_path()
         bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
         domain = self.upload_config[ConfigLabel.DOMAIN_FLAG]
         domain_path = bucket_path.replace(bucket, domain)
-        official = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
-        return domain_path + official
+        return domain_path
 
 
 class Notifier:
@@ -386,7 +423,7 @@ class Notifier:
         mobile_obj = None
         if ConfigLabel.AT_FLAG in config:
             if ConfigLabel.MOBILE_FLAG in config[ConfigLabel.AT_FLAG]:
-                mobile_obj = config
+                mobile_obj = config[ConfigLabel.AT_FLAG][ConfigLabel.MOBILE_FLAG]
 
         mobiles = list()
         if mobile_obj:

@@ -40,6 +40,7 @@ def test_uploader_run():
     print(f'ver_name: {ver_name}')
     uploader = release_apk.Uploader(work_path, app_code, ver_name)
     uploader.process()
+    # uploader.upload_official_file()
     print(uploader.get_zip_uploaded_list())
     print(uploader.get_official_addr())
 
