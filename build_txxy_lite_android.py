@@ -19,7 +19,6 @@ import argparse
 import subprocess
 import xmltodict
 import protect_android_app as protect_app
-import creditutils.apk_util as apk
 import creditutils.zip_util as zip_util
 import creditutils.apk_util as apk_util
 
@@ -259,7 +258,7 @@ class ProjectBuilder:
         print('source apk path: {}'.format(src_file))
 
         if os.path.exists(src_file):
-            apk_items = apk.get_apk_info(src_file)
+            apk_items = apk_util.get_apk_info(src_file)
 
             actual_ver_name = self.get_main_ver_name(apk_items['versionName'])
             if actual_ver_name != self.info[BuilderLabel.VER_NAME_FLAG]:
@@ -622,8 +621,8 @@ class BuildManager:
         keystore = os.path.abspath(file_util.normalpath(keystore))
         storepass = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREPASS_FLAG]
         storealias = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREALIAS_FLAG]
-        signed_path = apk.get_default_signed_path(protected_path)
-        rtn = apk.sign_apk(keystore, storepass, storealias, to_sign_path, signed_path)
+        signed_path = apk_util.get_default_signed_path(protected_path)
+        rtn = apk_util.sign_apk(keystore, storepass, storealias, to_sign_path, signed_path)
         if rtn:
             str_info = 'Protect {} and sign success.'.format(self.apk_output_path)
             source_name = os.path.basename(signed_path)
