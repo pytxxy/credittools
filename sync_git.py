@@ -92,9 +92,15 @@ class Manager:
                         repo.git.reset(remote_map[k].name, hard=True)
                         repo.git.pull()
                     else:
-                        repo.git.checkout(k)
-                        repo.git.reset(remote_map[k].name, hard=True)
-                        repo.git.pull()
+                        try:
+                            repo.git.checkout(k)
+                            repo.git.reset(remote_map[k].name, hard=True)
+                            repo.git.pull()
+                        except git.exc.GitCommandError as e:
+                            repo.git.branch(k, d=True)
+                            repo.git.checkout(remote_map[k].name, b=k, f=True)
+                        finally:
+                            pass
                 else:
                     repo.git.checkout(remote_map[k].name, b=k, f=True)
 
