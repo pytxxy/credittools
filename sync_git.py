@@ -108,10 +108,13 @@ class Manager:
                             repo.git.reset(remote_map[k].name, hard=True)
                             repo.git.pull()
                         except git.exc.GitCommandError as e:
-                            other = _get_other_branch_name(local_map, k)
-                            repo.git.checkout(other)
-                            repo.git.branch(k, d=True)
-                            repo.git.checkout(remote_map[k].name, b=k, f=True)
+                            other = Manager._get_other_branch_name(local_map, k)
+                            if other:
+                                repo.git.checkout(other)
+                                repo.git.branch(k, d=True)
+                                repo.git.checkout(remote_map[k].name, b=k, f=True)
+                            else:
+                                raise e
                         finally:
                             pass
                 else:
