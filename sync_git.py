@@ -65,6 +65,17 @@ class Manager:
                     Manager.sync_repo(temp_file_path)
                 else:
                     Manager.sync_repo_recursive(temp_file_path)
+    
+    @staticmethod
+    def _get_other_branch_name(git_map, curr_name):
+        other = None
+        for item in git_map:
+            if item != curr_name:
+                other = item
+                break
+
+        return other
+    
     @staticmethod
     def sync_repo(repo_path):
         # 先更新git仓库信息
@@ -97,6 +108,8 @@ class Manager:
                             repo.git.reset(remote_map[k].name, hard=True)
                             repo.git.pull()
                         except git.exc.GitCommandError as e:
+                            other = _get_other_branch_name(local_map, k)
+                            repo.git.checkout(other)
                             repo.git.branch(k, d=True)
                             repo.git.checkout(remote_map[k].name, b=k, f=True)
                         finally:
