@@ -99,24 +99,25 @@ class Manager:
         for k in remote_map:
             if k != Manager.HEAD_NAME:
                 if k in local_map:
-                    if k == repo.active_branch.name:
-                        repo.git.reset(remote_map[k].name, hard=True)
-                        repo.git.pull()
-                    else:
-                        try:
+                    try:
+                        if k == repo.active_branch.name:
+                            repo.git.reset(remote_map[k].name, hard=True)
+                            repo.git.pull()
+                        else:
                             repo.git.checkout(k)
                             repo.git.reset(remote_map[k].name, hard=True)
                             repo.git.pull()
-                        except git.exc.GitCommandError as e:
-                            other = Manager._get_other_branch_name(local_map, k)
-                            if other:
-                                repo.git.checkout(other)
-                                repo.git.branch(k, d=True)
-                                repo.git.checkout(remote_map[k].name, b=k, f=True)
-                            else:
-                                raise e
-                        finally:
-                            pass
+                    except git.exc.GitCommandError as e:
+                        # 在pull同步出错的条件下，先将当前工作区切换到其他分支，再删除当前分支，然后重新从服务器拉取该分支
+                        other = Manager._get_other_branch_name(local_map, k)
+                        if other:
+                            repo.git.checkout(other)
+                            repo.git.branch(k, d=True)
+                            repo.git.checkout(remote_map[k].name, b=k, f=True)
+                        else:
+                            raise e
+                    finally:
+                        pass
                 else:
                     repo.git.checkout(remote_map[k].name, b=k, f=True)
 
