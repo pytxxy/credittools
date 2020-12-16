@@ -333,7 +333,7 @@ class BuildManager:
     #     __APK_OUTPUT_PATH_INFORMAl_PATTERN = '([\d\.]+)beta_(\w+_\d+)-(\d+)-(\d+)\.apk'
     #     __APK_OUTPUT_PATH_FORMAl_PATTERN = '([\d\.]+)-(\d+)-(\d+)\.apk'
 
-    __APK_OUTPUT_PATH_PATTERN = '^([\d\.]+(?:(?:beta_\w+_\d+)|(?:_\w+))?)-(\d+)-(\d+)\.apk$'
+    __APK_OUTPUT_PATH_PATTERN = '^([\d\.]+(?:(?:beta_\w+_\d+)|(?:_\w+))?)-(\d+)(?:-debug)?-(\d+)\.apk$'
 
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
