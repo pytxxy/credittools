@@ -95,7 +95,7 @@ class BuildCmd:
 
     extend_map_key = {'API_VERSION':'api_ver', 'JPUSH_APPKEY':'jpush_appkey'}
 
-    cmd_format = exec_name + ' --configure-on-demand {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+    cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
                       '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
                       '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
