@@ -106,21 +106,25 @@ class Manager:
             
             prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
             code_url = v.ssh_url_to_repo
-            
-            if self.to_clean_history:
-                # 先删除远程服务器上的tag信息，本地clone的时候就不会存在该信息
-                if v.tags:
-                    tags = v.tags.list()
-                    for tag in tags:
-                        tag.delete()
 
-            self.checkout(prj_path, path, code_url)
-            sync_git.Manager.sync_repo(prj_git_path)
-            
-            if self.to_clean_history:
-                clean_history(prj_git_path, v)
+            # 只有本地不存在相关目录才从服务器端同步
+            if not os.path.isdir(prj_git_path):
+                if self.to_clean_history:
+                    # 先删除远程服务器上的tag信息，本地clone的时候就不会存在该信息
+                    if v.tags:
+                        tags = v.tags.list()
+                        for tag in tags:
+                            tag.delete()
 
-            print(f'processed {path_with_namespace}.')
+                self.checkout(prj_path, path, code_url)
+                sync_git.Manager.sync_repo(prj_git_path)
+                
+                if self.to_clean_history:
+                    clean_history(prj_git_path, v)
+
+                print(f'processed {path_with_namespace}.')
+            else:
+                print(f'{path_with_namespace} already exists.')
 
             # cnt_index += 1
             # if cnt_index >= cnt_butt:
