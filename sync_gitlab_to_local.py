@@ -110,20 +110,23 @@ class Manager:
             # 只有本地不存在相关目录才从服务器端同步
             if not os.path.isdir(prj_git_path):
                 print(f'to process {path_with_namespace}.')
-                if self.to_clean_history:
-                    # 先删除远程服务器上的tag信息，本地clone的时候就不会存在该信息
-                    if v.tags:
-                        tags = v.tags.list()
-                        for tag in tags:
-                            tag.delete()
+                try:
+                    if self.to_clean_history:
+                        # 先删除远程服务器上的tag信息，本地clone的时候就不会存在该信息
+                        if v.tags:
+                            tags = v.tags.list()
+                            for tag in tags:
+                                tag.delete()
 
-                self.checkout(prj_path, path, code_url)
-                sync_git.Manager.sync_repo(prj_git_path)
-                
-                if self.to_clean_history:
-                    clean_history(prj_git_path, v)
+                    self.checkout(prj_path, path, code_url)
+                    sync_git.Manager.sync_repo(prj_git_path)
+                    
+                    if self.to_clean_history:
+                        clean_history(prj_git_path, v)
 
-                print(f'processed {path_with_namespace}.')
+                    print(f'processed {path_with_namespace}.')
+                except gitlab.exceptions.GitlabHttpError as e:
+                    print(f'error: {str(e)}')
             else:
                 print(f'{path_with_namespace} already exists.')
 
