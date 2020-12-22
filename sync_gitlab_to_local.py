@@ -109,6 +109,7 @@ class Manager:
 
             # 只有本地不存在相关目录才从服务器端同步
             if not os.path.isdir(prj_git_path):
+                print(f'to process {path_with_namespace}.')
                 if self.to_clean_history:
                     # 先删除远程服务器上的tag信息，本地clone的时候就不会存在该信息
                     if v.tags:
