@@ -125,7 +125,7 @@ class Manager:
                         clean_history(prj_git_path, v)
 
                     print(f'processed {path_with_namespace}.')
-                except gitlab.exceptions.GitlabHttpError as e:
+                except gitlab.exceptions.GitlabDeleteError as e:
                     print(f'error: {str(e)}')
             else:
                 print(f'{path_with_namespace} already exists.')
