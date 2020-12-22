@@ -30,6 +30,39 @@ class DataLabel:
     ssh_url_to_repo = 'ssh_url_to_repo'
     path_with_namespace = 'path_with_namespace'
 
+def clean_history(repo_path, project):
+    temp_name = 'middle_temp_butt_none'
+    master_branch = None
+    try:
+        # 先取消分支保护
+        master_branch = project.branches.get('master')
+        master_branch.unprotect()
+
+        # 先更新git仓库信息
+        repo = git.Repo(repo_path)
+
+        # 先获取本地分支信息
+        local_branches = repo.branches
+        local_map = dict()
+        for item in local_branches:
+            local_map[item.name] = item
+
+        # 如果本地分支没有相应的远程分支，则创建，如果有则更新覆盖。
+        for k in local_map:
+            if k != repo.active_branch.name:
+                repo.git.checkout(k)
+
+            repo.git.checkout(temp_name, orphan=True)
+            repo.git.add(all=True)
+            repo.git.commit('Initial commit.', a=True, m=True)
+            repo.git.branch(k, d=True)
+            repo.git.branch(k, m=True)
+            repo.git.push('origin', k, f=True)
+    finally:
+        # 最后恢复分支保护
+        if master_branch:
+            master_branch.protect()
+
 class Manager:
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
@@ -64,8 +97,19 @@ class Manager:
             
             prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
             code_url = v.ssh_url_to_repo
+            
+            if self.to_clean_history:
+                # 先删除远程服务器上的tag信息，本地clone的时候就不会存在该信息
+                if v.tags:
+                    tags = v.tags.list()
+                    for tag in tags:
+                        tag.delete()
+
             self.checkout(prj_path, path, code_url)
             sync_git.Manager.sync_repo(prj_git_path)
+            
+            if self.to_clean_history:
+                clean_history(prj_git_path, v)
 
             # cnt_index += 1
             # if cnt_index >= cnt_butt:
@@ -134,6 +178,7 @@ def get_args(src_args=None):
     parser.add_argument('src', metavar='src', help='source gitlab server')
     parser.add_argument('token', metavar='token', help='source gitlab server token')
     parser.add_argument('git_root', metavar='git_root', help='git root directory')
+    parser.add_argument('--clean-history', dest='to_clean_history', action='store_true', default=False, help='indicate to clean history and synchronise to remote')
     
     # parser.print_help()
 
