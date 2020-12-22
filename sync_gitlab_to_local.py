@@ -35,8 +35,17 @@ def clean_history(repo_path, project):
     master_branch = None
     try:
         # 先取消分支保护
-        master_branch = project.branches.get('master')
-        master_branch.unprotect()
+        branches = project.branches.list()
+        master_branch = None
+        master_tag = 'master'
+        for branch in branches:
+            if master_tag == branch.name:
+                master_branch = branch
+
+            branch.unprotect()
+
+        # 一种获取分支方式
+        # master_branch = project.branches.get('master')
 
         # 先更新git仓库信息
         repo = git.Repo(repo_path)
