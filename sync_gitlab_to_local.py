@@ -120,6 +120,8 @@ class Manager:
             if self.to_clean_history:
                 clean_history(prj_git_path, v)
 
+            print(f'processed {path_with_namespace}.')
+
             # cnt_index += 1
             # if cnt_index >= cnt_butt:
             #     break
