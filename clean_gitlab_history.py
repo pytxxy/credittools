@@ -91,7 +91,7 @@ class Manager:
 
     @staticmethod
     def get_protected_branch_names(project):
-        protected_branches = project.protected_branches.list()
+        protected_branches = project.protectedbranches.list()
         protected_branch_names = []
         for item in protected_branches:
             protected_branch_names.append(item.name)
@@ -146,7 +146,7 @@ class Manager:
             if tag.name in protected_tag_names:
                 if self.to_reserve_protected_tag:
                     continue
-                
+
                 tag.unprotect()
 
             tag.delete()
