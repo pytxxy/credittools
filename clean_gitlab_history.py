@@ -18,7 +18,6 @@ import sync_git
 # (2)依次清理各个分支的历史记录(如果分支是受保护的，则先解开保护，处理完之后再恢复)；
 # (3)中间有任何一个库操作失败，则记录下来，继续对下一个进行操作；
 
-_DEFAULT_ID = -1
 
 class DataLabel:
     id = 'id'
@@ -38,9 +37,10 @@ class Manager:
 
     def process(self):
         op = gitlab.Gitlab(self.src, private_token=self.token)
-        if self.prj_id != _DEFAULT_ID:
-            project = op.projects.get(self.prj_id)
-            self.clean_history(project)
+        if self.prj_ids:
+            for prj_id in self.prj_ids:
+                project = op.projects.get(prj_id)
+                self.clean_history(project)
         else:
             projects = op.projects.list(all=True)
             # cnt_butt = 4
@@ -176,7 +176,7 @@ def get_args(src_args=None):
     parser.add_argument('--clean_tag', dest='to_clean_tag', action='store_true', default=False, help='indicate to clean tag')
     parser.add_argument('--reserve_protected_tag', dest='to_reserve_protected_tag', action='store_true', default=False, help='indicate to reserve protected tag')
     parser.add_argument('--reprocess', dest='to_reprocess', action='store_true', default=False, help='indicate to reprocess the existing local project')
-    parser.add_argument('--id', dest='prj_id', action='store', default=_DEFAULT_ID, type=int, help='indicate to clean single project with this id')
+    parser.add_argument('--id', dest='prj_ids', action='append', default=None, type=int, help='indicate to clean the project with special id')
     
     # parser.print_help()
 
