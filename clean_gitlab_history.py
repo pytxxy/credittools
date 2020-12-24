@@ -119,8 +119,9 @@ class Manager:
         
         result = dict()
         to_append = False
-        for branch in project.branches.list():
-            if branch.commit.message != self.commit_msg:
+        branches = project.branches.list()
+        for branch in branches:
+            if branch.commit[DataLabel.message] != self.commit_msg:
                 to_append = True
 
                 branch_item_info = dict()
