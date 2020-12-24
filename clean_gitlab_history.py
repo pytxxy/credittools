@@ -25,6 +25,11 @@ class DataLabel:
     path = 'path'
     ssh_url_to_repo = 'ssh_url_to_repo'
     path_with_namespace = 'path_with_namespace'
+    archived = 'archived'
+    branch = 'branch'
+    tag = 'tag'
+    count = 'count'
+    message = 'message'
 
 class Manager:
     def __init__(self, args):
@@ -34,23 +39,32 @@ class Manager:
         #         pprint.pprint(vars(self))
 
         self.git_root = os.path.abspath(self.git_root)
+        self.total_count = 0
+        self.need_to_process = []
 
     def process(self):
         op = gitlab.Gitlab(self.src, private_token=self.token)
-        if self.prj_ids:
-            for prj_id in self.prj_ids:
-                project = op.projects.get(prj_id)
-                self.clean_history(project)
+        if not self.to_statistic:
+            if self.prj_ids:
+                for prj_id in self.prj_ids:
+                    project = op.projects.get(prj_id)
+                    self.clean_history(project)
+            else:
+                projects = op.projects.list(all=True)
+                # cnt_butt = 4
+                # cnt_index = 0
+                for item in projects:
+                    self.clean_history(item)
+                    
+                    # cnt_index += 1
+                    # if cnt_index >= cnt_butt:
+                    #     break
         else:
             projects = op.projects.list(all=True)
-            # cnt_butt = 4
-            # cnt_index = 0
-            for item in projects:
-                self.clean_history(item)
-                
-                # cnt_index += 1
-                # if cnt_index >= cnt_butt:
-                #     break
+            self.collect_statistics(projects)
+            print(f'total count: {self.total_count}')
+            print(f'neet to process count: {len(self.need_to_process)}')
+            pprint.pprint(self.need_to_process)
 
     def clean_history(self, project):
         path = project.path
@@ -92,6 +106,37 @@ class Manager:
             print(f'processed {path_with_namespace}.')
         else:
             print(f'{path_with_namespace} already exists.')
+
+    def collect_statistics(self, projects):
+        for item in projects:
+            self.total_count += 1
+            self.collect_statistics(item)
+
+    def collect_project_statistics(self, project):
+        # 先统计是否有分支不是新初始化的
+        # 统计tag是否超出最大值
+        # 确认是否是存档的
+        
+        result = dict()
+        to_append = False
+        for branch in project.branches.list():
+            if branch.commit.message != self.commit_msg:
+                to_append = True
+
+                branch_item_info = dict()
+                branch_item_info[DataLabel.name] = branch.name
+                branch_item_info[DataLabel.message] = branch.commit.message
+                result[DataLabel.branch] = branch_item_info
+                break
+        
+        tag_count = len(project.tags.list())
+        if tag_count > self.max_tag_count or project.archived:
+            to_append = True
+
+        if to_append:
+            result[DataLabel.tag] = tag_count
+            result[DataLabel.archived] = project.archived
+            self.need_to_process.append(result)
 
     @staticmethod
     def get_protected_branch_names(project):
@@ -177,11 +222,18 @@ def get_args(src_args=None):
     parser.add_argument('src', metavar='src', help='source gitlab server')
     parser.add_argument('token', metavar='token', help='source gitlab server token')
     parser.add_argument('git_root', metavar='git_root', help='git root directory')
-    parser.add_argument('--clean_tag', dest='to_clean_tag', action='store_true', default=False, help='indicate to clean tag')
-    parser.add_argument('--reserve_protected_tag', dest='to_reserve_protected_tag', action='store_true', default=False, help='indicate to reserve protected tag')
-    parser.add_argument('--reprocess', dest='to_reprocess', action='store_true', default=False, help='indicate to reprocess the existing local project')
-    parser.add_argument('--id', dest='prj_ids', action='append', default=None, type=int, help='indicate to clean the project with special id')
     
+    process_group = parser.add_mutually_exclusive_group()
+    process_group.add_argument('--clean_tag', dest='to_clean_tag', action='store_true', default=False, help='indicate to clean tag')
+    process_group.add_argument('--reserve_protected_tag', dest='to_reserve_protected_tag', action='store_true', default=False, help='indicate to reserve protected tag')
+    process_group.add_argument('--reprocess', dest='to_reprocess', action='store_true', default=False, help='indicate to reprocess the existing local project')
+    process_group.add_argument('--id', dest='prj_ids', action='append', default=None, type=int, help='indicate to clean the project with special id')
+    
+    statistic_group = parser.add_mutually_exclusive_group()
+    statistic_group.add_argument('--statistic', dest='to_statistic', action='store_true', default=False, help='indicate to collect statistics')
+    statistic_group.add_argument('--commit_msg', dest='commit_msg', action='store', default='Initial commit.\n', type=str, help='to specify the commit message')
+    statistic_group.add_argument('--max_tag_count', dest='max_tag_count', action='store', default=3, type=int, help='to specify the maximum tag count')
+
     # parser.print_help()
 
     return parser.parse_args(src_args)
