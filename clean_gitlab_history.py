@@ -226,16 +226,14 @@ def get_args(src_args=None):
     parser.add_argument('token', metavar='token', help='source gitlab server token')
     parser.add_argument('git_root', metavar='git_root', help='git root directory')
     
-    process_group = parser.add_mutually_exclusive_group()
-    process_group.add_argument('--clean_tag', dest='to_clean_tag', action='store_true', default=False, help='indicate to clean tag')
-    process_group.add_argument('--reserve_protected_tag', dest='to_reserve_protected_tag', action='store_true', default=False, help='indicate to reserve protected tag')
-    process_group.add_argument('--reprocess', dest='to_reprocess', action='store_true', default=False, help='indicate to reprocess the existing local project')
-    process_group.add_argument('--id', dest='prj_ids', action='append', default=None, type=int, help='indicate to clean the project with special id')
+    parser.add_argument('--clean_tag', dest='to_clean_tag', action='store_true', default=False, help='indicate to clean tag')
+    parser.add_argument('--reserve_protected_tag', dest='to_reserve_protected_tag', action='store_true', default=False, help='indicate to reserve protected tag')
+    parser.add_argument('--reprocess', dest='to_reprocess', action='store_true', default=False, help='indicate to reprocess the existing local project')
+    parser.add_argument('--id', dest='prj_ids', action='append', default=None, type=int, help='indicate to clean the project with special id')
     
-    statistic_group = parser.add_mutually_exclusive_group()
-    statistic_group.add_argument('--statistic', dest='to_statistic', action='store_true', default=False, help='indicate to collect statistics')
-    statistic_group.add_argument('--commit_msg', dest='commit_msg', action='store', default='Initial commit.', type=str, help='to specify the commit message')
-    statistic_group.add_argument('--max_tag_count', dest='max_tag_count', action='store', default=3, type=int, help='to specify the maximum tag count')
+    parser.add_argument('--statistic', dest='to_statistic', action='store_true', default=False, help='indicate to collect statistics')
+    parser.add_argument('--commit_msg', dest='commit_msg', action='store', default='Initial commit.', type=str, help='to specify the commit message')
+    parser.add_argument('--max_tag_count', dest='max_tag_count', action='store', default=3, type=int, help='to specify the maximum tag count')
 
     # parser.print_help()
 
