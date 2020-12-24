@@ -126,7 +126,7 @@ class Manager:
 
                 branch_item_info = dict()
                 branch_item_info[DataLabel.name] = branch.name
-                branch_item_info[DataLabel.message] = branch.commit.message
+                branch_item_info[DataLabel.message] = branch.commit[DataLabel.message]
                 result[DataLabel.branch] = branch_item_info
                 break
         
