@@ -76,6 +76,10 @@ class Manager:
         if not os.path.isdir(prj_git_path):
             print(f'to process {path_with_namespace}.')
 
+            if project.archived:
+                print(f'{path_with_namespace} is archived and can not been process.')
+                return
+
             if self.to_clean_tag:
                 # 如果要清理tag，先删除远程服务器上的tag信息，本地clone的时候就不会存在该信息
                 self.clean_tag(project)
