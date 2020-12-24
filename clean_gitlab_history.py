@@ -121,7 +121,7 @@ class Manager:
         to_append = False
         branches = project.branches.list()
         for branch in branches:
-            if branch.commit[DataLabel.message] != self.commit_msg:
+            if not branch.commit[DataLabel.message].startswith(self.commit_msg):
                 to_append = True
 
                 branch_item_info = dict()
@@ -232,7 +232,7 @@ def get_args(src_args=None):
     
     statistic_group = parser.add_mutually_exclusive_group()
     statistic_group.add_argument('--statistic', dest='to_statistic', action='store_true', default=False, help='indicate to collect statistics')
-    statistic_group.add_argument('--commit_msg', dest='commit_msg', action='store', default='Initial commit.\n', type=str, help='to specify the commit message')
+    statistic_group.add_argument('--commit_msg', dest='commit_msg', action='store', default='Initial commit.', type=str, help='to specify the commit message')
     statistic_group.add_argument('--max_tag_count', dest='max_tag_count', action='store', default=3, type=int, help='to specify the maximum tag count')
 
     # parser.print_help()
