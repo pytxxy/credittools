@@ -135,6 +135,8 @@ class Manager:
             to_append = True
 
         if to_append:
+            result[DataLabel.id] = project.id
+            result[DataLabel.name] = project.name
             result[DataLabel.tag] = tag_count
             result[DataLabel.archived] = project.archived
             self.need_to_process.append(result)
