@@ -110,7 +110,7 @@ class Manager:
     def collect_statistics(self, projects):
         for item in projects:
             self.total_count += 1
-            self.collect_statistics(item)
+            self.collect_project_statistics(item)
 
     def collect_project_statistics(self, project):
         # 先统计是否有分支不是新初始化的
