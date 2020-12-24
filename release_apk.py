@@ -120,6 +120,10 @@ class Generator:
         # 先进行清理本地apk文件夹操作
         self._clear_output_directory(self.apk_root_parent_path)
 
+        # 如果已经存在目标文件夹，则先删除
+        if os.path.isdir(self.apk_root_path):
+            shutil.rmtree(self.apk_root_path)
+
         # 从sftp服务器下载通用apk文件
         download_manager.download_sftp_file(self.sftp_config_path, self.apk_root_path, self.ver_name, sftp_root_tag=self.app_code, as_file=False)
 
