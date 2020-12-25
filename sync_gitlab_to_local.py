@@ -16,9 +16,8 @@ import sync_git
 # 2.依次对所有库所有分支进行如下操作：
 # (1)下载下来指定分支并更新；
 # (2)中间有任何一个库操作失败，则记录下来，继续对下一个进行操作；
-
-class ApiLabel:
-    v4 = 'v4'
+# (3)在更新库的同时，记录到有效列表中；
+# (4)遍历本地目录，如果不在有效列表中，则直接删除该目录；
 
 
 class DataLabel:
@@ -54,6 +53,10 @@ class Manager:
             #     break
 
         # 清理本地有而服务器端已不存在的库
+        self.collect_invalid_repo_recursive(self.git_root)
+        for item in self.invalid_local_paths:
+            shutil.rmtree(item)
+            print(f'removed {item}.')
 
     def sync_project(self, project):
         path = project.path
