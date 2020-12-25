@@ -112,7 +112,7 @@ class Manager:
                         other = Manager._get_other_branch_name(local_map, k)
                         if other:
                             repo.git.checkout(other)
-                            repo.git.branch(k, d=True)
+                            repo.git.branch(k, D=True)
                             repo.git.checkout(remote_map[k].name, b=k, f=True)
                         else:
                             raise e
@@ -124,7 +124,7 @@ class Manager:
         # 如果远程没有相应的本地分支，则删除本地分支。
         for item in local_map:
             if item not in remote_map:
-                repo.git.branch(item, d=True)
+                repo.git.branch(item, D=True)
     
     @staticmethod
     def push_to_remote(repo_path):
