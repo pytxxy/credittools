@@ -15,7 +15,7 @@ import shutil
 import creditutils.zip_util as myzip
 import tempfile
 import traceback
-
+import sys
 
 # 更改plist文件指定键的值
 def update_plist_item(info_plist_path, key, value):
@@ -127,18 +127,7 @@ class BuildManager:
         self.pods_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.PODS_PATH]
         self.init_ruby_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INIT_RUBY_PAYH]
 
-        # 代码扫描脚本目录
-        # self.is_open_converage = False
-        # env = self._get_detail_env(self.ver_env)
-        # if BuildConfigParser.COVERAGE_FLAG in self.ori_build_config:
-        #     coverage_list_dict = self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][BuildConfigParser.COMPLIE_FLAG]
-        #     if env in coverage_list_dict:
-        #         if coverage_list_dict[env].lower() == str('true'):
-        #             self.is_open_converage = True
-        # if self.is_open_converage:
-        #     coverage_shell_path = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][
-        #         BuildConfigParser.COVERRAGE_SHELL_PATH]
-        #     self.coverage_shell_path = myfile.normalpath(coverage_shell_path)
+
 
     def _get_detail_env(self, ver_env):
         env_list_dict = self.ori_build_config[BuildConfigParser.ENV_LIST_FLAG]
@@ -328,9 +317,11 @@ class BuildManager:
                     if os.path.splitext(file)[1] == '.xcarchive':
                         xcarchive_file_path = os.path.join(self.output_directory, file)
                         shutil.rmtree(xcarchive_file_path)
-
-                sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
+                try:
+                    sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
                                     'IOS', '', self.ipa_name, self.ipa_name)
+                except Exception as e:
+                    raise Exception('upload To Ftp Error')
 
     # 复制文件到目标文件夹并删除源文件
     def process_func(self, src_file, dst_file):
