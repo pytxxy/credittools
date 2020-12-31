@@ -208,20 +208,24 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, code_version, sftp_
         :param source_file_name: 原始文件名
         :return:
     """
-    manager = UploadManager(sftp_config_path)
-    manager.init_path_config(ver_name_code, ver_env, code_version, sftp_root_tag=sftp_root_tag, local_dir_path=local_dir_path, mobile_os=mobile_os, channel=channel)
+
     try:
+        manager = UploadManager(sftp_config_path)
+        manager.init_path_config(ver_name_code, ver_env, code_version, sftp_root_tag=sftp_root_tag, local_dir_path=local_dir_path, mobile_os=mobile_os, channel=channel)
         manager.upload_to_sftp(target_file_name=target_file_name, source_file_name=source_file_name, desc_data=desc_data)
     except Exception as e:
         raise Exception('upload Error')
 
 
 if __name__ == '__main__':
-    upload_to_sftp(sftp_config_path=r'/Users/apple/Documents/BuildScript/ios/pytxxy', sftp_root_tag='txxy',ver_name_code='4.0.1beta_t_01',
-                   ver_env='test', code_version='610b85b4d600b266b1c3c2dc6c3c06f789877290', mobile_os='Android',
-                   local_dir_path=r'D:\auto_build\pytxxy\output\test\20190424_093723',
-                   target_file_name='4.0.1beta_t_01-526-20190424.apk',
-                   source_file_name='4.0.1beta_t_01-526-20190424.apk')
+    try:
+        upload_to_sftp(sftp_config_path=r'/Users/apple/Documents/BuildScript/ios/pytxxy', sftp_root_tag='txxy',ver_name_code='4.0.1beta_t_01',
+                    ver_env='test', code_version='610b85b4d600b266b1c3c2dc6c3c06f789877290', mobile_os='Android',
+                    local_dir_path=r'D:\auto_build\pytxxy\output\test\20190424_093723',
+                    target_file_name='4.0.1beta_t_01-526-20190424.apk',
+                    source_file_name='4.0.1beta_t_01-526-20190424.apk')
+    except Exception as e:
+        raise Exception('upload to ftp Error')
 
     # for s in sys.path:
     #     print(s)
