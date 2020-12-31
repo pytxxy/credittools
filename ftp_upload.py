@@ -190,6 +190,7 @@ class UploadManager:
 
             sftp_cli.close()
         else:
+            raise Exception(sftp_handler[1])
             print(sftp_handler[1])
 
 
@@ -219,7 +220,7 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, code_version, sftp_
 
 if __name__ == '__main__':
     try:
-        upload_to_sftp(sftp_config_path=r'/Users/apple/Documents/BuildScript/ios/pytxxy', sftp_root_tag='txxy',ver_name_code='4.0.1beta_t_01',
+        upload_to_sftp(sftp_config_path=r'/Users/apple/Documents/BuildScript/ios/pytxxy', sftp_root_tag='test', ver_name_code='4.0.1beta_t_01',
                     ver_env='test', code_version='610b85b4d600b266b1c3c2dc6c3c06f789877290', mobile_os='Android',
                     local_dir_path=r'D:\auto_build\pytxxy\output\test\20190424_093723',
                     target_file_name='4.0.1beta_t_01-526-20190424.apk',
