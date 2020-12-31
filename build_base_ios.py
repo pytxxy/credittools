@@ -317,11 +317,8 @@ class BuildManager:
                     if os.path.splitext(file)[1] == '.xcarchive':
                         xcarchive_file_path = os.path.join(self.output_directory, file)
                         shutil.rmtree(xcarchive_file_path)
-                try:
-                    sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
+                sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
                                     'IOS', '', self.ipa_name, self.ipa_name)
-                except Exception as e:
-                    raise Exception(e)
 
     # 复制文件到目标文件夹并删除源文件
     def process_func(self, src_file, dst_file):
