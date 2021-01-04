@@ -210,9 +210,9 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, code_version, sftp_
         :return:
     """
 
-        manager = UploadManager(sftp_config_path)
-        manager.init_path_config(ver_name_code, ver_env, code_version, sftp_root_tag=sftp_root_tag, local_dir_path=local_dir_path, mobile_os=mobile_os, channel=channel)
-        manager.upload_to_sftp(target_file_name=target_file_name, source_file_name=source_file_name, desc_data=desc_data)
+    manager = UploadManager(sftp_config_path)
+    manager.init_path_config(ver_name_code, ver_env, code_version, sftp_root_tag=sftp_root_tag, local_dir_path=local_dir_path, mobile_os=mobile_os, channel=channel)
+    manager.upload_to_sftp(target_file_name=target_file_name, source_file_name=source_file_name, desc_data=desc_data)
 
 
 if __name__ == '__main__':
