@@ -102,8 +102,7 @@ class ConfigBuildManager:
                     ret_code = subprocess.check_call(['sh', 'push.sh'])
                     print(ret_code)
                 except Exception as e:
-                    print('return_code:', e.returncode)
-                    sys.exit(0)
+                    raise Exception(e)
 
 
             self.tag_info[pod_name] = new_push_tag
