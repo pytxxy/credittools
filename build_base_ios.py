@@ -147,12 +147,13 @@ class BuildManager:
         ipa_path_flag = 'ipa_path'
         output_name_flag = 'output_name'
         export_options_flag = 'export_options'
-
+        export_xcargs_flag = 'export_xcargs'
         if scheme_flag in self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]:
             params[scheme_flag] = self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][scheme_flag]
 
         params[configuration_flag] = self.ori_build_config[BuildConfigParser.ENV_FLAG][self.ver_env][self.ver_type]
         params[export_method_flag] = self.ori_build_config[BuildConfigParser.EXPORT_FLAG][self.ver_type][self.ver_env]
+        params[export_xcargs_flag] = '-allowProvisioningUpdates'
 
         # 判断当前项目是工程集，还是单个工程，再配置相应的参数
         curr_prj_flag = None
@@ -214,7 +215,7 @@ class BuildManager:
         #     str_format = '/usr/local/bin/gym --workspace {workspace} --scheme {scheme} --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name}'
         #     str_format_head = 'fastlane gym --use_legacy_build_api '
         str_format_head = 'fastlane gym '
-        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options}'
+        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --export_xcargs {export_xcargs}'
         item_format = '--{} {{{}}}'
 
         opt_format_items = []
