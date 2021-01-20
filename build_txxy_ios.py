@@ -26,8 +26,7 @@ class BuildManager(build_base.BuildManager):
                 try:
                     pod_tag.push_pod_tag_to_remote(self.work_path, podfile_path, ['PYCategory', 'PYLibrary', 'PYTXXYBaseModule', 'PYAccountManager', 'PYPersonIdentify'], self.branch_dict, self.tag_dict)
                 except Exception as e:
-                    print('push error')
-                    sys.exit(0)
+                    raise e
 
 
 

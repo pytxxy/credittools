@@ -15,7 +15,7 @@ import shutil
 import creditutils.zip_util as myzip
 import tempfile
 import traceback
-
+import sys
 
 # 更改plist文件指定键的值
 def update_plist_item(info_plist_path, key, value):
@@ -127,18 +127,7 @@ class BuildManager:
         self.pods_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.PODS_PATH]
         self.init_ruby_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INIT_RUBY_PAYH]
 
-        # 代码扫描脚本目录
-        # self.is_open_converage = False
-        # env = self._get_detail_env(self.ver_env)
-        # if BuildConfigParser.COVERAGE_FLAG in self.ori_build_config:
-        #     coverage_list_dict = self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][BuildConfigParser.COMPLIE_FLAG]
-        #     if env in coverage_list_dict:
-        #         if coverage_list_dict[env].lower() == str('true'):
-        #             self.is_open_converage = True
-        # if self.is_open_converage:
-        #     coverage_shell_path = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][
-        #         BuildConfigParser.COVERRAGE_SHELL_PATH]
-        #     self.coverage_shell_path = myfile.normalpath(coverage_shell_path)
+
 
     def _get_detail_env(self, ver_env):
         env_list_dict = self.ori_build_config[BuildConfigParser.ENV_LIST_FLAG]
@@ -158,12 +147,13 @@ class BuildManager:
         ipa_path_flag = 'ipa_path'
         output_name_flag = 'output_name'
         export_options_flag = 'export_options'
-
+        export_xcargs_flag = 'export_xcargs'
         if scheme_flag in self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]:
             params[scheme_flag] = self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][scheme_flag]
 
         params[configuration_flag] = self.ori_build_config[BuildConfigParser.ENV_FLAG][self.ver_env][self.ver_type]
         params[export_method_flag] = self.ori_build_config[BuildConfigParser.EXPORT_FLAG][self.ver_type][self.ver_env]
+        params[export_xcargs_flag] = '-allowProvisioningUpdates'
 
         # 判断当前项目是工程集，还是单个工程，再配置相应的参数
         curr_prj_flag = None
@@ -225,7 +215,7 @@ class BuildManager:
         #     str_format = '/usr/local/bin/gym --workspace {workspace} --scheme {scheme} --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name}'
         #     str_format_head = 'fastlane gym --use_legacy_build_api '
         str_format_head = 'fastlane gym '
-        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options}'
+        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --export_xcargs {export_xcargs}'
         item_format = '--{} {{{}}}'
 
         opt_format_items = []
@@ -328,7 +318,6 @@ class BuildManager:
                     if os.path.splitext(file)[1] == '.xcarchive':
                         xcarchive_file_path = os.path.join(self.output_directory, file)
                         shutil.rmtree(xcarchive_file_path)
-
                 sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
                                     'IOS', '', self.ipa_name, self.ipa_name)
 

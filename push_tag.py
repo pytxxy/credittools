@@ -102,8 +102,7 @@ class ConfigBuildManager:
                     ret_code = subprocess.check_call(['sh', 'push.sh'])
                     print(ret_code)
                 except Exception as e:
-                    print('return_code:', e.returncode)
-                    sys.exit(0)
+                    raise Exception(e)
 
 
             self.tag_info[pod_name] = new_push_tag
@@ -135,8 +134,11 @@ class ConfigBuildManager:
                 new_spec_version_line = re.sub(r'([0-9]\.|[0-9])+', tag_version, spec_version_line)
                 src_dst_list = list(zip([spec_version_line], [new_spec_version_line]))
                 file.replace_string_in_file(spec_file, src_dst_list)
-                git.push_to_remote([spec_file], '[other]: 提交{}版本'.format(tag_version), repository=None, refspecs=None, _dir=source_path)
-                git.git_push_tag(source_path, tag_version)
+                try:
+                    git.push_to_remote([spec_file], '[other]: 提交{}版本'.format(tag_version), repository=None, refspecs=None, _dir=source_path)
+                    git.git_push_tag(source_path, tag_version)
+                except Exception as e:
+                    raise Exception(e)
 
     def get_remote_url(self, pod_name):
         pod_item = self.pod_config[pod_name]
