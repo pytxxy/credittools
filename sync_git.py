@@ -80,6 +80,7 @@ class Manager:
     def sync_repo(repo_path):
         # 先更新git仓库信息
         repo = git.Repo(repo_path)
+        print(f'to synchronize {repo_path}.')
         repo.git.fetch(all=True)
 
         # 先获取远程分支信息以及本地分支信息
