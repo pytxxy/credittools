@@ -149,6 +149,7 @@ class BuildManager:
         export_options_flag = 'export_options'
         export_xcargs_flag = 'export_xcargs'
         bitcode_flag = 'bitcode'
+        symbols_flag = 'symbols'
         if scheme_flag in self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]:
             params[scheme_flag] = self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][scheme_flag]
 
@@ -156,8 +157,10 @@ class BuildManager:
         params[export_method_flag] = self.ori_build_config[BuildConfigParser.EXPORT_FLAG][self.ver_type][self.ver_env]
         params[export_xcargs_flag] = '-allowProvisioningUpdates'
         params[bitcode_flag] = 'false'
+        params[symbols_flag] = 'false'
         if self.ver_env == 'flight':
             params[bitcode_flag] = 'true'
+            params[symbols_flag] = 'true'
         # 判断当前项目是工程集，还是单个工程，再配置相应的参数
         curr_prj_flag = None
         for prj_item in [workspace_flag, project_flag]:
@@ -219,7 +222,7 @@ class BuildManager:
         #     str_format_head = 'fastlane gym --use_legacy_build_api '
 
         str_format_head = 'fastlane gym '
-        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --export_xcargs {export_xcargs} --include_bitcode {bitcode}'
+        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --export_xcargs {export_xcargs} --include_bitcode {bitcode} --include_symbols {symbols}'
         item_format = '--{} {{{}}}'
 
         opt_format_items = []
