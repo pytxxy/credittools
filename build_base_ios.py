@@ -214,8 +214,11 @@ class BuildManager:
     def build(self, param_map):
         #     str_format = '/usr/local/bin/gym --workspace {workspace} --scheme {scheme} --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name}'
         #     str_format_head = 'fastlane gym --use_legacy_build_api '
+        bitcode = 'false'
+        if self.ver_env == 'flight':
+            bitcode = 'true'
         str_format_head = 'fastlane gym '
-        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --export_xcargs {export_xcargs} --include_bitcode true'
+        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --export_xcargs {export_xcargs} --include_bitcode {}'.format(bitcode)
         item_format = '--{} {{{}}}'
 
         opt_format_items = []
