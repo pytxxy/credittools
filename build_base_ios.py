@@ -331,8 +331,16 @@ class BuildManager:
         # 更新工程文件
             print('更新工程文件')
             print(self.project_path)
-            dst_dir = os.path.abspath(self.project_path)
+            new_project_path = self.project_path
+            allfilelist = os.listdir(self.project_path)
+            for file in allfilelist:
+                filepath = os.path.join(self.project_path, file)
+                if os.path.isdir(filepath):
+                    new_project_path = myfile.normalpath(filepath)
+                    break
+            dst_dir = os.path.abspath(new_project_path)
             os.chdir(dst_dir)
+
             rtn_str = subprocess.check_output('git diff --name-only --diff-filter=ACM | grep -e "\.m$" -e "\.mm$" -e "\.h$" -e "\.hh$"', shell=True, universal_newlines=True)
             if rtn_str:
                 info_arr = rtn_str.split('\n')
