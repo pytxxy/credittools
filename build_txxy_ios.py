@@ -39,7 +39,7 @@ class BuildManager(build_base.BuildManager):
             pods_path = pod_path + os.sep + 'Pods'
             pods_path = myfile.normalpath(pods_path)
             exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_local_pod, print_flag=True)
-            if os.path.exists(pods_path):
+            if os.path.exists(pods_path) and self.update_pod:
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
             else:
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
@@ -112,10 +112,11 @@ def get_args(src_args=None):
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan'], help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', help='branch name')
 
-    parser.add_argument('--pushpodtag', dest='to_push_pod_tag', action= 'store_true', default=False, help='need to push pod tag;')
+    parser.add_argument('--pushpodtag', dest='to_push_pod_tag', action='store_true', default=False, help='need to push pod tag;')
     parser.add_argument('--podbranch',  metavar='branch_dict',    type=str,  dest='branch_dict',   default=[], help='pod branch name')
     parser.add_argument('--podtag',     metavar='tag_dict',  type=str,   dest='tag_dict',   help='tag name dict eg:{pod_name:tag_name}')
-    
+
+    parser.add_argument('--podupdate', dest='update_pod ', action='store_true', default=True, help='need to update pod;')
 #     parser.print_help()
 
     return parser.parse_args(src_args)    

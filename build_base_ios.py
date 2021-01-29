@@ -328,6 +328,20 @@ class BuildManager:
                 sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
                                     'IOS', '', self.ipa_name, self.ipa_name)
 
+        # 更新工程文件
+            print('更新工程文件')
+            print(self.project_path)
+            dst_dir = os.path.abspath(self.project_path)
+            os.chdir(dst_dir)
+            rtn_str = subprocess.check_output('git diff --name-only --diff-filter=ACM | grep -e "\.m$" -e "\.mm$" -e "\.h$" -e "\.hh$"', shell=True, universal_newlines=True)
+            if rtn_str:
+                info_arr = rtn_str.split('\n')
+                try:
+                    git.push_to_remote(info_arr, '[other]: 提交打包版本信息', repository=None, refspecs=None, _dir=source_path)
+                except Exception as e:
+                    raise Exception(e)
+
+
     # 复制文件到目标文件夹并删除源文件
     def process_func(self, src_file, dst_file):
         if os.path.splitext(src_file)[1] != '.ipa':
