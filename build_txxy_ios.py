@@ -39,7 +39,7 @@ class BuildManager(build_base.BuildManager):
             pods_path = pod_path + os.sep + 'Pods'
             pods_path = myfile.normalpath(pods_path)
             exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_local_pod, print_flag=True)
-            if os.path.exists(pods_path) and self.update_pod:
+            if os.path.exists(pods_path) and not self.no_update_pod:
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
             else:
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
@@ -116,7 +116,7 @@ def get_args(src_args=None):
     parser.add_argument('--podbranch',  metavar='branch_dict',    type=str,  dest='branch_dict',   default=[], help='pod branch name')
     parser.add_argument('--podtag',     metavar='tag_dict',  type=str,   dest='tag_dict',   help='tag name dict eg:{pod_name:tag_name}')
 
-    parser.add_argument('--podupdate', dest='update_pod', action='store_true', default=True, help='need to update pod;')
+    parser.add_argument('--nopodupdate', dest='no_update_pod', default=False, help='need to update pod;')
 #     parser.print_help()
 
     return parser.parse_args(src_args)    
