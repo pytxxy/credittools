@@ -401,6 +401,7 @@ def get_args(src_args=None):
                         help='need to upload to sftp Server;')
     parser.add_argument('--branch', metavar='branch', dest='branch', help='branch name')
 
+    parser.add_argument('--podupdate', dest='update_pod', action='store_true', default=True, help='need to update pod;')
     #     parser.print_help()
 
     return parser.parse_args(src_args)
