@@ -349,7 +349,8 @@ class BuildManager:
                     if len(item) > 0:
                         new_info_arr.append(item)
                 try:
-                    git.push_to_remote(info_arr, '[other]: 提交打包版本信息', repository=None, refspecs=None, _dir=source_path)
+                    source_path = git.get_git_root(self.project_path)
+                    git.push_to_remote(new_info_arr, '[other]: 提交打包版本信息', repository=None, refspecs=None, _dir=source_path)
                 except Exception as e:
                     raise Exception(e)
 
