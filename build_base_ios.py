@@ -344,6 +344,10 @@ class BuildManager:
             rtn_str = subprocess.check_output('git diff --name-only --diff-filter=ACM', shell=True, universal_newlines=True)
             if rtn_str:
                 info_arr = rtn_str.split('\n')
+                new_info_arr = []
+                for item in info_arr:
+                    if len(item) > 0:
+                        new_info_arr.append(item)
                 try:
                     git.push_to_remote(info_arr, '[other]: 提交打包版本信息', repository=None, refspecs=None, _dir=source_path)
                 except Exception as e:
