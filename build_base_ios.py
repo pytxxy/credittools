@@ -341,7 +341,7 @@ class BuildManager:
             dst_dir = os.path.abspath(new_project_path)
             os.chdir(dst_dir)
 
-            rtn_str = subprocess.check_output('git diff --name-only --diff-filter=ACM | grep -e "\.m$" -e "\.mm$" -e "\.h$" -e "\.hh$"', shell=True, universal_newlines=True)
+            rtn_str = subprocess.check_output('git diff --name-only --diff-filter=ACM', shell=True, universal_newlines=True)
             if rtn_str:
                 info_arr = rtn_str.split('\n')
                 try:
