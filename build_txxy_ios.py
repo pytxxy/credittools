@@ -116,7 +116,7 @@ def get_args(src_args=None):
     parser.add_argument('--podbranch',  metavar='branch_dict',    type=str,  dest='branch_dict',   default=[], help='pod branch name')
     parser.add_argument('--podtag',     metavar='tag_dict',  type=str,   dest='tag_dict',   help='tag name dict eg:{pod_name:tag_name}')
 
-    parser.add_argument('--nopodupdate', dest='no_update_pod', default=False, help='need to update pod;')
+    parser.add_argument('--nopodupdate', dest='no_update_pod', action='store_true', default=False, help='need to update pod;')
 #     parser.print_help()
 
     return parser.parse_args(src_args)    
