@@ -39,11 +39,14 @@ class BuildManager(build_base.BuildManager):
             pods_path = pod_path + os.sep + 'Pods'
             pods_path = myfile.normalpath(pods_path)
             exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_local_pod, print_flag=True)
-            if os.path.exists(pods_path) and not self.no_update_pod:
+            if os.path.exists(pods_path):
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
             else:
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
-            
+
+            if not self.no_update_pod:
+                exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, 'pod install --deployment', print_flag=True)
+                
         # 先恢复正常的编译配置
         reinit_config_script_path = self.init_ruby_path
         reinit_config_script_path = myfile.normalpath(reinit_config_script_path)
