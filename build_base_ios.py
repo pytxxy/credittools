@@ -258,7 +258,7 @@ class BuildManager:
             code_url = self.app_build_cofig[BuildConfigParser.CODE_URL_FLAG]
             if self.use_git:
                 git.checkout_or_update(self.project_path, code_url, self.code_ver, self.branch)
-                git.revert(self.project_path)
+                git.revert_temporary(self.project_path)
             else:
                 # 根据参数配置svn用户名和密码
                 username_flag = 'svn_user'
