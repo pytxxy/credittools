@@ -70,8 +70,9 @@ class UploadManager:
         local_file_path = os.path.join(self.local_dir_path, source_file_name)
 
         result = sftp_util.sftp_upload_file(sftp_cli, remote_dir, local_file_path)
-        sftp_cli.rename(file_util.join_unix_path(remote_dir, source_file_name),
-                        file_util.join_unix_path(remote_dir, target_file_name))
+        if self.mobile_os.lower() == 'android':
+            sftp_cli.rename(file_util.join_unix_path(remote_dir, source_file_name),
+                            file_util.join_unix_path(remote_dir, target_file_name))
         print(result[1])
 
     def _upload_record_file(self, sftp_cli, remote_dir, data, file_name='record.txt'):
