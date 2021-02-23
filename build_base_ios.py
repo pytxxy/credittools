@@ -147,7 +147,7 @@ class BuildManager:
         ipa_path_flag = 'ipa_path'
         output_name_flag = 'output_name'
         export_options_flag = 'export_options'
-        export_xcargs_flag = 'export_xcargs'
+        xcargs_flag = 'xcargs'
         bitcode_flag = 'bitcode'
         symbols_flag = 'symbols'
         if scheme_flag in self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]:
@@ -155,7 +155,7 @@ class BuildManager:
 
         params[configuration_flag] = self.ori_build_config[BuildConfigParser.ENV_FLAG][self.ver_env][self.ver_type]
         params[export_method_flag] = self.ori_build_config[BuildConfigParser.EXPORT_FLAG][self.ver_type][self.ver_env]
-        params[export_xcargs_flag] = '-allowProvisioningUpdates'
+        params[xcargs_flag] = '-allowProvisioningUpdates'
         params[bitcode_flag] = 'false'
         params[symbols_flag] = 'false'
         if self.ver_env == 'flight':
@@ -222,7 +222,7 @@ class BuildManager:
         #     str_format_head = 'fastlane gym --use_legacy_build_api '
 
         str_format_head = 'fastlane gym '
-        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --export_xcargs {export_xcargs} --include_bitcode {bitcode} --include_symbols {symbols}'
+        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --xcargs {xcargs} --include_bitcode {bitcode} --include_symbols {symbols}'
         item_format = '--{} {{{}}}'
 
         opt_format_items = []
