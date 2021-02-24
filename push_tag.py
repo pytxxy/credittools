@@ -61,6 +61,8 @@ class ConfigBuildManager:
             temp_source_path = self.work_path + os.sep + 'podFolder'
             source_path = temp_source_path + os.sep + pod_name
             source_path = file.normalpath(source_path)
+            print('代码更新本地路径：')
+            print(source_path)
             git.checkout_or_update(source_path, self.get_remote_url(pod_name), branch=branch_name)
             git_root = git.get_git_root(source_path)
 
