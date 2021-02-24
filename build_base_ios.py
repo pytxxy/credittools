@@ -329,6 +329,12 @@ class BuildManager:
                 sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
                                     'IOS', '', self.ipa_name, self.ipa_name)
 
+        # 复制文件到document
+            ipa_file_path = self.output_directory + os.sep + self.ipa_name
+            ipa_dir_path = myfile.normalpath('/Users/caifh/Documents/ipa')
+            if os.path.exists(ipa_dir_path):
+                shutil.copy(ipa_file_path, ipa_dir_path)
+
         # 更新工程文件
             print('更新工程文件')
             print(self.project_path)
