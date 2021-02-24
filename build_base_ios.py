@@ -257,6 +257,8 @@ class BuildManager:
         if self.to_update:
             code_url = self.app_build_cofig[BuildConfigParser.CODE_URL_FLAG]
             if self.use_git:
+                print('代码更新本地路径：')
+                print(self.project_path)
                 git.checkout_or_update(self.project_path, code_url, self.code_ver, self.branch)
                 git.revert_temporary(self.project_path)
             else:
