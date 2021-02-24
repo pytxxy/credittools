@@ -60,7 +60,7 @@ class UploadManager:
                         (target_file_name.find('ent') == -1 and filename.find('ent') == -1):
                     try:
                         print('开始删除')
-                        print(file_util.join_unix_path(remote_dir, filename))
+                        print(filename)
                         sftp_cli.remove(filename)
                         break
                     except Exception as e:
@@ -180,6 +180,8 @@ class UploadManager:
         self._upload_record_file(sftp_cli, remote_dir, record_text_data)
 
     def upload_to_sftp(self, target_file_name='', source_file_name='', desc_data=None):
+        print('sftp_user')
+        print(self.config_data[_USERNAME_FLAG])
         sftp_handler = sftp_util.sftp_connect(self.config_data[_HOST_FLAG], self.config_data[_PORT_FLAG],
                                           self.config_data[_USERNAME_FLAG], self.config_data[_PASSWORD_FLAG])
         if sftp_handler[0] == 1:
