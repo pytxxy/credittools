@@ -61,7 +61,7 @@ class UploadManager:
                     try:
                         print('开始删除')
                         print(file_util.join_unix_path(remote_dir, filename))
-                        sftp_cli.remove(file_util.join_unix_path(remote_dir, filename))
+                        sftp_cli.unlink(file_util.join_unix_path(remote_dir, filename))
                         break
                     except Exception as e:
                         print(e)
