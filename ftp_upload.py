@@ -60,6 +60,7 @@ class UploadManager:
                         (target_file_name.find('ent') == -1 and filename.find('ent') == -1):
                     try:
                         print('开始删除')
+                        print(file_util.join_unix_path(remote_dir, filename))
                         sftp_cli.remove(file_util.join_unix_path(remote_dir, filename))
                         break
                     except Exception as e:
