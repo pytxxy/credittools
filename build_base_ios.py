@@ -15,6 +15,7 @@ import shutil
 import creditutils.zip_util as myzip
 import tempfile
 import traceback
+import xml.etree.ElementTree as ET
 import sys
 
 # 更改plist文件指定键的值
@@ -257,10 +258,19 @@ class BuildManager:
         if self.to_update:
             code_url = self.app_build_cofig[BuildConfigParser.CODE_URL_FLAG]
             if self.use_git:
-                print('代码更新本地路径：')
-                print(self.project_path)
+
+                self.sftp_config_path = ['config', 'base', 'sftp_config.xml']
+                self.sftp_config_path = os.sep.join(self.sftp_config_path)
+                self.sftp_config_path = self.work_path + os.sep + self.sftp_config_path
+                doc = xmltodict.parse(myfile.read_file_content(sftp_config_path))
+                sftp_config_data = doc['config']
+                self.temp_username = sftp_config_data['username']
+                self.temp_password = sftp_config_data['password']
+
                 git.checkout_or_update(self.project_path, code_url, self.code_ver, self.branch)
                 git.revert_temporary(self.project_path)
+
+
             else:
                 # 根据参数配置svn用户名和密码
                 username_flag = 'svn_user'
@@ -312,6 +322,15 @@ class BuildManager:
 
             # 将*.ipa包上传到sftp服务器
             if self.to_upload_sftp:
+
+                doc = ET.parse(self.sftp_config_path)
+                root = doc.getroot()
+                username = root.find('username')
+                username.text = self.temp_username
+                password = root.find('password')
+                password.text = self.temp_password
+                doc.write(self.sftp_config_path)
+                print('----------change it--------')
 
                 # 复制podfile.lock 到目标文件夹
                 pods_lock_file = self.pods_path + os.sep + 'Podfile.lock'
