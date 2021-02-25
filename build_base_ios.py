@@ -266,7 +266,7 @@ class BuildManager:
                 self.sftp_config_path = ['config', 'base', 'sftp_config.xml']
                 self.sftp_config_path = os.sep.join(self.sftp_config_path)
                 self.sftp_config_path = self.work_path + os.sep + self.sftp_config_path
-                doc = xmltodict.parse(myfile.read_file_content(sftp_config_path))
+                doc = xmltodict.parse(myfile.read_file_content(self.sftp_config_path))
                 sftp_config_data = doc['config']
                 self.temp_username = sftp_config_data['username']
                 self.temp_password = sftp_config_data['password']
