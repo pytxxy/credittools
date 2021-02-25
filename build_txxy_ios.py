@@ -24,7 +24,9 @@ class BuildManager(build_base.BuildManager):
                 podfile_path = self.pods_path + os.sep + 'Podfile'
                 podfile_path = myfile.normalpath(podfile_path)
                 try:
+                    print('开始更新子模块')
                     pod_tag.push_pod_tag_to_remote(self.work_path, podfile_path, ['PYCategory', 'PYLibrary', 'PYTXXYBaseModule', 'PYAccountManager', 'PYPersonIdentify'], self.branch_dict, self.tag_dict)
+                    print('子模块更新结束')
                 except Exception as e:
                     raise e
 
