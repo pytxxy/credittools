@@ -103,6 +103,10 @@ class BuildManager:
             setattr(self, name, value)
         # pprint.pprint(vars(self))
 
+        self.temp_username = ''
+        self.temp_password = ''
+        self.sftp_config_path = ''
+
         self.work_path = os.path.abspath(self.work_path)
 
         # 解析基础配置文件路径
