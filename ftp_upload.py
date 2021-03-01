@@ -52,24 +52,22 @@ class UploadManager:
     # 上传 ipa 包或者 apk 包
     def _upload_setup_file(self, sftp_cli, remote_dir, source_file_name, target_file_name):
     # 判断 sftp 文件夹有没有之前的老包，有的话则需要先删除
-        sftp_cli.chdir(remote_dir)
-        sftp_dir_list = sftp_cli.listdir(remote_dir)
-        for filename in sftp_dir_list:
-            if os.path.splitext(filename)[1] == '.ipa':
-                if (target_file_name.find('ent') > 0 and filename.find('ent') > 0) or \
-                        (target_file_name.find('ent') == -1 and filename.find('ent') == -1):
-                    try:
-                        print('开始删除')
-                        print(filename)
-                        sftp_cli.remove(filename)
-                        break
-                    except Exception as e:
-                        print(e)
-
-            elif os.path.splitext(filename)[1] == '.apk':
-                sftp_cli.remove(file_util.join_unix_path(remote_dir, filename))
-                break
-
+        try:
+            sftp_cli.chdir(remote_dir)
+            sftp_dir_list = sftp_cli.listdir(remote_dir)
+            for filename in sftp_dir_list:
+                if os.path.splitext(filename)[1] == '.ipa':
+                    if (target_file_name.find('ent') > 0 and filename.find('ent') > 0) or \
+                            (target_file_name.find('ent') == -1 and filename.find('ent') == -1):
+                            print('开始删除')
+                            print(filename)
+                            sftp_cli.remove(filename)
+                            break
+                elif os.path.splitext(filename)[1] == '.apk':
+                    sftp_cli.remove(file_util.join_unix_path(remote_dir, filename))
+                    break
+        except Exception as e:
+            print(e)
         local_file_path = os.path.join(self.local_dir_path, source_file_name)
 
         result = sftp_util.sftp_upload_file(sftp_cli, remote_dir, local_file_path)
