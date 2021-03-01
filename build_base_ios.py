@@ -383,6 +383,7 @@ class BuildManager:
                 try:
                     source_path = git.get_git_root(self.project_path)
                     git.push_to_remote(new_info_arr, '[other]: 提交打包版本信息', repository=None, refspecs=None, _dir=source_path)
+                    git.revert_temporary(source_path)
                 except Exception as e:
                     raise Exception(e)
 
