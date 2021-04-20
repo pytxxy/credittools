@@ -129,16 +129,20 @@ class Consumer:
 
     def update_server(self, result):
         server_map = self.get_new_server_info(result)
-        with self.lock():
+        with self.lock:
             for item in server_map:
                 if item not in self.record:
                     self.record[item] = 0
             
-            # 对于已经消失的服务节点，如果当前处理闲置状态，则清除出去。
+            # 对于已经消失的服务节点，如果当前处于闲置状态，则清除出去。
+            to_del_list = list()
             for item in self.record:
                 if item not in server_map:
                     if self.record[item] <= 0:
-                        del self.record[item]
+                        to_del_list.append(item)
+
+            for k in to_del_list:
+                del self.record[k]
 
     def get_server_key(self, item):
         ip = item[0]
