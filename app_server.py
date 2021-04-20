@@ -737,6 +737,7 @@ class AppService(Service):
         '''
         result = dict()
         try:
+            log_info(str(data))
             manager = BuildManager(data)
             manager.process()
             result['code'] = 0
