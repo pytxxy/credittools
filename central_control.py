@@ -190,7 +190,7 @@ def start_server():
     producer = Producer.get_instance()
     consumer = Consumer(producer)
     consumer.process()
-    s = ThreadedServer(CentralControlService, port=9999, auto_register=True)
+    s = ThreadedServer(CentralControlService, port=9999, auto_register=True, listener_timeout=None)
     s.start()
 
 

@@ -751,7 +751,7 @@ class AppService(Service):
 
 def start_server():
     obj = AppService()
-    s = ThreadedServer(obj, port=9999, auto_register=True)
+    s = ThreadedServer(obj, port=9999, auto_register=True, listener_timeout=None)
     s.start()
 
 
