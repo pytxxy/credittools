@@ -105,7 +105,8 @@ class Consumer:
                 
                 # 先等待一段时间
                 time.sleep(to_wait)
-            except KeyboardInterrupt:
+            except KeyboardInterrupt as e:
+                raise e
                 break
 
     def sub_processor(self, *args, **kwargs):
