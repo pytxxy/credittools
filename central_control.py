@@ -85,6 +85,7 @@ class Consumer:
         '''
         先查看当前是否有空闲的执行单元，如果有，则从生产者队列中取出一个任务进行分配。
         '''
+        to_wait = 0.1
         while True:
             try:
                 result = rpyc.discover(self.unit_name)
@@ -97,11 +98,15 @@ class Consumer:
                             thread.start()
                             self.record[item] += 1
 
+                # 先等待一段时间
+                time.sleep(to_wait)
             except rpyc.utils.factory.DiscoveryError:
                 print_t(f'not found server with name {self.unit_name}!')
-
-            # 先等待一段时间
-            time.sleep(0.1)
+                
+                # 先等待一段时间
+                time.sleep(to_wait)
+            except KeyboardInterrupt:
+                break
 
     def sub_processor(self, *args, **kwargs):
         item = args[0]
