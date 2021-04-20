@@ -2,6 +2,8 @@ import argparse
 import rpyc
 import creditutils.trivial_util as trivial_util
 
+class BuilderLabel:
+    DEFAULT_CHAN = 'pycredit'
 
 def connect_with_name(data):
     conn = rpyc.connect_by_service('central_control')
