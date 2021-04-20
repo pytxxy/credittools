@@ -161,7 +161,7 @@ class CentralControlService(Service):
         super().__init__()
         print_t('init success.')
 
-    def process(self, data) -> dict:
+    def exposed_process(self, data) -> dict:
         '''
         实现Android版本的编译
         :param data: 所有调用编译需要用到的参数
