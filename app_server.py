@@ -50,6 +50,10 @@ class LocalLogger:
             if LocalLogger.whole_path == log_path and not LocalLogger.instance:
                 return LocalLogger.instance
 
+            parent = os.path.dirname(log_path)
+            if not os.path.isdir(parent):
+                os.makedirs(parent)
+
             logger = logging.getLogger(__name__)
             logger.setLevel(level = logging.INFO)
             handler = logging.FileHandler(log_path)
