@@ -1,3 +1,4 @@
+import threading
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 from creditutils.trivial_util import print_t
@@ -7,6 +8,8 @@ import re
 from enum import IntEnum
 import platform
 import shutil
+import logging
+import datetime
 
 import ftp_upload
 import creditutils.apk_builder_util as apk_builder
@@ -34,6 +37,48 @@ This server listens on a broadcast UDP socket, and will answer to queries about 
 windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简化调用。
 '''
 
+class LocalLogger:
+    lock = threading.Lock()
+    whole_path = None
+    instance = None
+
+    @staticmethod
+    def get_logger_with_path(target_dir='/data/log/app_server'):
+        with LocalLogger.lock:
+            today = datetime.datetime.now().strftime('%Y%m%d')
+            log_path = os.path.join(os.path.abspath(target_dir), f'{today}.log')
+            if LocalLogger.whole_path == log_path and not LocalLogger.instance:
+                return LocalLogger.instance
+
+            logger = logging.getLogger(__name__)
+            logger.setLevel(level = logging.INFO)
+            handler = logging.FileHandler(log_path)
+            handler.setLevel(logging.INFO)
+            formatter = logging.Formatter('%(asctime)s-%(name)s-%(levelname)s:%(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+
+            LocalLogger.whole_path = log_path
+            LocalLogger.instance = logger
+
+            return LocalLogger.instance
+
+
+def get_logger():
+    return LocalLogger.get_logger_with_path()
+
+
+def log_info(data):
+    get_logger().info(data)
+
+def log_debug(data):
+    get_logger().debug(data)
+
+def log_warn(data):
+    get_logger().warn(data)
+
+def log_error(data):
+    get_logger().error(data)
 
 
 _system = platform.system()
@@ -183,7 +228,7 @@ class BuildCmd:
                 extend_para = f' -P{k}={value}'
                 cmd_str = cmd_str + extend_para
 
-        print(cmd_str)
+        log_info(cmd_str)
 
         return cmd_str
 
@@ -199,11 +244,11 @@ def make_apk_with_gradle(work_path, cmd_str, pre_cmd=BuildCmd.pre_cmd):
     try:
         if pre_cmd:
             pre_build_cmd = _system_pre + os.path.join(os.path.dirname(work_path), pre_cmd)
-            print(pre_build_cmd)
+            log_info(pre_build_cmd)
             subprocess.check_call(pre_build_cmd, shell=True)
 
         build_cmd = _system_pre + os.path.join(os.path.dirname(work_path), cmd_str)
-        print(build_cmd)
+        log_info(build_cmd)
         subprocess.check_call(build_cmd, shell=True)
         # os.system(build_cmd)
     except subprocess.CalledProcessError:
@@ -241,12 +286,12 @@ class ProjectBuilder:
         build_type = self.info[BuilderLabel.TYPE_FLAG]
 
         relative_path = os.path.join(app_code + net_env.capitalize(), build_type)
-        print(relative_path)
+        log_info(relative_path)
 
         return relative_path
 
     def build(self):
-        print('building apk begin ...')
+        log_info('building apk begin ...')
 
         # 获取apk名称
         apk_name = os.path.basename(self.main_prj_path)
@@ -268,7 +313,7 @@ class ProjectBuilder:
         make_apk_with_gradle(self.main_prj_path, cmd_str)
 
         src_file = apk_path
-        print('source apk path: {}'.format(src_file))
+        log_info('source apk path: {}'.format(src_file))
 
         if os.path.exists(src_file):
             apk_items = apk_util.get_apk_info(src_file)
@@ -277,20 +322,22 @@ class ProjectBuilder:
             if actual_ver_name != self.info[BuilderLabel.VER_NAME_FLAG]:
                 info = 'set version name is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_NAME_FLAG],
                                                                           actual_ver_name)
+                log_error(info)
                 raise Exception(info)
 
             if apk_items['versionCode'] != str(self.info[BuilderLabel.VER_CODE_FLAG]):
                 info = 'set version code is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_CODE_FLAG],
                                                                           apk_items['versionCode'])
+                log_error(info)
                 raise Exception(info)
 
             dst_file = self.info[BuilderLabel.OUTPUT_DIRECTORY_FLAG] + os.sep + self.info[
                 BuilderLabel.OUTPUT_NAME_FLAG]
             file_util.replace_file(src_file, dst_file)
 
-            print('built the apk {}.'.format(dst_file))
+            log_info('built the apk {}.'.format(dst_file))
         else:
-            print('build {} failed!'.format(apk_name))
+            log_error('build {} failed!'.format(apk_name))
 
     def get_main_ver_name(self, whole_name):
         ptn_str = '^(\d+(?:\.\d+)+)(?![.\d])'
@@ -298,7 +345,9 @@ class ProjectBuilder:
         if rtn:
             return rtn.group(1)
         else:
-            raise Exception('{} is invalid!'.format(whole_name))
+            info = f'{whole_name} is invalid!'
+            log_error(info)
+            raise Exception(info)
 
 
 class BuildConfigLabel:
@@ -541,7 +590,7 @@ class BuildManager:
         self.prj_root = git.get_git_root(self.project_code_path)
         main_prj_path = os.path.join(self.prj_root, main_prj_name)
         self.prj_code_ver = git.get_revision(self.prj_root)
-        print('current code version is ' + self.prj_code_ver)
+        log_error('current code version is ' + self.prj_code_ver)
 
         # 下面这部分代码依赖于前面成员变量的初始化，请不要随意调整执行位置
         if self.to_update:
@@ -554,7 +603,7 @@ class BuildManager:
                 value = getattr(self, name)
                 if not value:
                     info = 'Please specify the {}.'.format(name)
-                    print(info)
+                    log_error(info)
                     exit(1)
 
             # 参数非空判断验证通过开始进行正式业务逻辑
@@ -580,14 +629,14 @@ class BuildManager:
                         source_name = self._protect_file(main_prj_path)
 
                 str_info = 'Build success, code version is {}.'.format(self.prj_code_ver)
-                print(str_info)
+                log_info(str_info)
 
                 # 进行编译好的版本提交操作
                 if hasattr(self, 'to_upload') and self.to_upload:
                     self._upload_file(source_name, target_name, to_upload_path, desc_data=desc_data)
             else:
                 str_info = 'Build failed, code version is {}.'.format(self.prj_code_ver)
-                print(str_info)
+                log_error(str_info)
 
     def build_app(self, info):
         prj_builder = ProjectBuilder(info)
@@ -636,11 +685,11 @@ class BuildManager:
         if rtn:
             str_info = 'Protect {} and sign success.'.format(self.apk_output_path)
             source_name = os.path.basename(signed_path)
+            log_info(str_info)
         else:
             str_info = 'Protect {} and sign failed!'.format(self.apk_output_path)
+            log_error(str_info)
             raise Exception(str_info)
-
-        print(str_info)
 
         return source_name
 
@@ -650,6 +699,7 @@ class BuildManager:
             ver_name_info = result.group(1)
         else:
             str_info = 'The output file name {} is invalid!'.format(target_name)
+            log_error(str_info)
             raise Exception(str_info)
 
         channel = '' # 调用的接口内部实现默认是空串
@@ -658,10 +708,10 @@ class BuildManager:
 
         # ftp_config_path = os.path.join(self.work_path, 'config')
         ftp_config_path = self.work_path
-        print(f'ver_name_info: {ver_name_info}')
-        print(f'target_name: {target_name}')
-        print(f'source_name: {source_name}')
-        print(f'channel: {channel}')
+        log_info(f'ver_name_info: {ver_name_info}')
+        log_info(f'target_name: {target_name}')
+        log_info(f'source_name: {source_name}')
+        log_info(f'channel: {channel}')
 
         ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, self.app_code,
                                   to_upload_path, mobile_os='Android', channel=channel, target_file_name=target_name,
@@ -673,7 +723,7 @@ class AppService(Service):
 
     def __init__(self) -> None:
         super().__init__()
-        print_t('init success.')
+        log_info('init success.')
 
     def compile(self, data) -> dict:
         '''
