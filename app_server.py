@@ -729,7 +729,7 @@ class AppService(Service):
         super().__init__()
         log_info('init success.')
 
-    def compile(self, data) -> dict:
+    def exposed_compile(self, data) -> dict:
         '''
         编译完成后输出结果
         :param data: 编译参数
