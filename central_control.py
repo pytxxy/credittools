@@ -79,6 +79,8 @@ class Consumer:
 
     def process(self):
         thread = threading.Thread(target=self.processor)
+        # 设置为守护线程，主线程结束时，该线程也会相应结束。
+        thread.setDaemon(True)
         thread.start()
 
     def processor(self):
@@ -97,17 +99,11 @@ class Consumer:
                             thread = threading.Thread(target=self.sub_processor, args=(item, node))
                             thread.start()
                             self.record[item] += 1
-
-                # 先等待一段时间
-                time.sleep(to_wait)
             except rpyc.utils.factory.DiscoveryError:
                 print_t(f'not found server with name {self.unit_name}!')
                 
-                # 先等待一段时间
-                time.sleep(to_wait)
-            except KeyboardInterrupt as e:
-                raise e
-                break
+            # 先等待一段时间
+            time.sleep(to_wait)
 
     def sub_processor(self, *args, **kwargs):
         item = args[0]
