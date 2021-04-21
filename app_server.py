@@ -411,6 +411,7 @@ class BuildManager:
 
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
+        # 透传过来的数据类型为“netref class 'rpyc.core.netref.type'”，不支持dict的方法items，需要换成键访问方式
         # for name, value in args.items():
         #     setattr(self, name, value)
         for k in args:
@@ -748,7 +749,7 @@ class AppService(Service):
         '''
         try:
             log_info(str(data))
-            log_info(f'type(data): {type(data)}')
+            # log_info(f'type(data): {type(data)}')
             manager = BuildManager(data)
             manager.process()
             code = 0
