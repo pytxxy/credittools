@@ -745,6 +745,7 @@ class AppService(Service):
         '''
         try:
             log_info(str(data))
+            log_info(f'type(data): {type(data)}')
             manager = BuildManager(data)
             manager.process()
             code = 0
