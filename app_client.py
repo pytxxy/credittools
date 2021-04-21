@@ -1,4 +1,5 @@
 import argparse
+import time
 import rpyc
 import creditutils.trivial_util as trivial_util
 
@@ -9,6 +10,7 @@ def connect_with_name(data):
     conn = rpyc.connect_by_service('central_control')
     result = conn.root.process(data)
     print(f'result: {result}')
+    # time.sleep(4)
     conn.close()
 
 

@@ -729,24 +729,23 @@ class AppService(Service):
         super().__init__()
         log_info('init success.')
 
-    def exposed_compile(self, data) -> dict:
+    def exposed_compile(self, data) -> Tuple[int, str]:
         '''
         编译完成后输出结果
         :param data: 编译参数
         :return:
         '''
-        result = dict()
         try:
             log_info(str(data))
             manager = BuildManager(data)
             manager.process()
-            result['code'] = 0
-            result['msg'] = 'success'
+            code = 0
+            msg = 'success'
         except:
-            result['code'] = 1
-            result['msg'] = 'failed'
+            code = 0
+            msg = 'failed'
 
-        return result
+        return code, msg
 
 
 def start_server():

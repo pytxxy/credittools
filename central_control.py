@@ -1,4 +1,5 @@
 import time
+from typing import Tuple
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 import threading
@@ -163,7 +164,7 @@ class CentralControlService(Service):
         super().__init__()
         print_t('init success.')
 
-    def exposed_process(self, data) -> dict:
+    def exposed_process(self, data) -> Tuple[int, str]:
         '''
         实现Android版本的编译
         :param data: 所有调用编译需要用到的参数
@@ -173,15 +174,20 @@ class CentralControlService(Service):
         index = producer.get_new_index()
         info = dict()
         info[Flag.event] = Event()
+        info[Flag.event].clear()
         info[Flag.data] = None
         producer.set_switch_data(index, info)
         target = dict()
         target[Flag.index] = index
         target[Flag.data] = data
 
+        print_t('to put queue.')
         producer.put(target)
 
+        print_t('wait to been processed.')
         info[Flag.event].wait()
+
+        print_t('process completed.')
         result = info[Flag.data]
         producer.del_switch_data(index)
 
