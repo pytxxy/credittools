@@ -44,7 +44,7 @@ class LocalLogger:
     instance = None
 
     @staticmethod
-    def get_logger_with_path(target_dir='/data/log/app_server'):
+    def get_logger_with_path(target_dir='/data/log/app_server', to_console=True):
         with LocalLogger.lock:
             today = datetime.datetime.now().strftime('%Y%m%d')
             log_path = os.path.join(os.path.abspath(target_dir), f'{today}.log')
@@ -62,6 +62,13 @@ class LocalLogger:
             formatter = logging.Formatter('%(asctime)s-%(name)s-%(levelname)s: %(message)s')
             handler.setFormatter(formatter)
             logger.addHandler(handler)
+
+            if to_console:
+                # 设置输出到控制台
+                handler_console = logging.StreamHandler() # 输出到控制台的handler
+                handler_console.setFormatter(formatter)
+                handler_console.setLevel(logging.INFO)  # 也可以不设置，不设置就默认用logger的level
+                logger.addHandler(handler_console)
 
             LocalLogger.whole_path = log_path
             LocalLogger.instance = logger
