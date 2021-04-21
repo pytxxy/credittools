@@ -745,7 +745,7 @@ class AppService(Service):
         except Exception as e:
             code = 0
             # msg = 'failed'
-            msg = 'str(e)'
+            msg = str(e)
 
         return code, msg
 
