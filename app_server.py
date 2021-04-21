@@ -411,8 +411,11 @@ class BuildManager:
 
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
-        for name, value in args.items():
-            setattr(self, name, value)
+        # for name, value in args.items():
+        #     setattr(self, name, value)
+        for k in args:
+            setattr(self, k, args[k])
+
         # pprint.pprint(vars(self))
 
         self.work_path = os.path.abspath('/data/android/auto_build/pytxxy')
