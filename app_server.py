@@ -742,9 +742,10 @@ class AppService(Service):
             manager.process()
             code = 0
             msg = 'success'
-        except:
+        except Exception as e:
             code = 0
-            msg = 'failed'
+            # msg = 'failed'
+            msg = 'str(e)'
 
         return code, msg
 
