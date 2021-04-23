@@ -38,6 +38,15 @@ This server listens on a broadcast UDP socket, and will answer to queries about 
 windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简化调用。
 '''
 
+# 默认监听超时时间
+# DEFAULT_LISTEN_TIMEOUT = 8*60*60
+DEFAULT_LISTEN_TIMEOUT = 8
+
+# 返回状态值
+CODE_SUCCESS = 0
+CODE_FAILED = 1
+
+
 class LocalLogger:
     lock = threading.Lock()
     whole_path = None
@@ -750,8 +759,9 @@ class AppService(Service):
         try:
             log_info(str(data))
             # log_info(f'type(data): {type(data)}')
-            manager = BuildManager(data)
-            manager.process()
+            # manager = BuildManager(data)
+            # manager.process()
+            time.sleep(100)
             code = 0
             msg = 'success'
         except Exception as e:
@@ -764,7 +774,7 @@ class AppService(Service):
 
 def start_server():
     obj = AppService()
-    s = ThreadedServer(obj, port=9999, auto_register=True, listener_timeout=None)
+    s = ThreadedServer(obj, port=9999, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
     s.start()
 
 

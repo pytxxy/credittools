@@ -25,6 +25,14 @@ windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简
 3.执行单元处理完毕后，要通知消费者调度器，然后由消费者调度器通知原始调用程序，完成一次任务的闭环。
 '''
 
+# 默认监听超时时间
+# DEFAULT_LISTEN_TIMEOUT = 8*60*60
+DEFAULT_LISTEN_TIMEOUT = 128
+
+# 返回状态值
+CODE_SUCCESS = 0
+CODE_FAILED = 1
+
 class Flag:
     index = 'index'
     event = 'event'
@@ -189,6 +197,9 @@ class CentralControlService(Service):
 
         print_t('process completed.')
         result = info[Flag.data]
+        if not result:
+            result = (CODE_FAILED, 'listen timeout!')
+
         producer.del_switch_data(index)
 
         return result
@@ -198,7 +209,7 @@ def start_server():
     producer = Producer.get_instance()
     consumer = Consumer(producer)
     consumer.process()
-    s = ThreadedServer(CentralControlService, port=9999, auto_register=True, listener_timeout=None)
+    s = ThreadedServer(CentralControlService, port=9999, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
     s.start()
 
 
