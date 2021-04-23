@@ -1,4 +1,5 @@
 import argparse
+from central_control import CODE_FAILED
 import time
 import rpyc
 import creditutils.trivial_util as trivial_util
@@ -8,7 +9,11 @@ class BuilderLabel:
 
 def connect_with_name(data):
     conn = rpyc.connect_by_service('central_control')
-    result = conn.root.process(data)
+    try:
+        result = conn.root.process(data)
+    except TimeoutError:
+        result = (CODE_FAILED, 'call process timeout in app_client!')
+
     print(f'result: {result}')
     # time.sleep(4)
     conn.close()

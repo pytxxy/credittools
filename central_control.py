@@ -121,7 +121,10 @@ class Consumer:
         conn = rpyc.connect(host, ip)
         index = node[Flag.index]
         param = node[Flag.data]
-        result = conn.root.compile(param)
+        try:
+            result = conn.root.compile(param)
+        except TimeoutError:
+            result = (CODE_FAILED, 'call compile timeout in central_control!')
         conn.close()
         info = self.producer.get_switch_data(index)
         self.producer.task_done()
@@ -197,8 +200,6 @@ class CentralControlService(Service):
 
         print_t('process completed.')
         result = info[Flag.data]
-        if not result:
-            result = (CODE_FAILED, 'listen timeout!')
 
         producer.del_switch_data(index)
 
