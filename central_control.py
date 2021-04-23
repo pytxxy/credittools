@@ -26,8 +26,8 @@ windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简
 '''
 
 # 默认监听超时时间
-# DEFAULT_LISTEN_TIMEOUT = 8*60*60
-DEFAULT_LISTEN_TIMEOUT = 128
+DEFAULT_LISTEN_TIMEOUT = 8*60*60
+# DEFAULT_LISTEN_TIMEOUT = 128
 
 # 返回状态值
 CODE_SUCCESS = 0
@@ -125,6 +125,8 @@ class Consumer:
             result = conn.root.compile(param)
         except TimeoutError:
             result = (CODE_FAILED, 'call compile timeout in central_control!')
+            
+        # print_t(result)
         conn.close()
         info = self.producer.get_switch_data(index)
         self.producer.task_done()

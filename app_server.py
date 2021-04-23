@@ -39,8 +39,8 @@ windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简
 '''
 
 # 默认监听超时时间
-# DEFAULT_LISTEN_TIMEOUT = 8*60*60
-DEFAULT_LISTEN_TIMEOUT = 140
+DEFAULT_LISTEN_TIMEOUT = 8*60*60
+# DEFAULT_LISTEN_TIMEOUT = 140
 
 # 返回状态值
 CODE_SUCCESS = 0
@@ -758,10 +758,10 @@ class AppService(Service):
         '''
         try:
             log_info(str(data))
-            # log_info(f'type(data): {type(data)}')
-            # manager = BuildManager(data)
-            # manager.process()
-            time.sleep(150)
+            log_info(f'type(data): {type(data)}')
+            manager = BuildManager(data)
+            manager.process()
+            # time.sleep(150)
             code = 0
             msg = 'success'
         except Exception as e:
