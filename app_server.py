@@ -38,8 +38,8 @@ This server listens on a broadcast UDP socket, and will answer to queries about 
 windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简化调用。
 '''
 
-# 默认监听超时时间
-DEFAULT_LISTEN_TIMEOUT = 8*60*60
+# 默认监听超时时间，以一次编译时间为参照，设置适当的冗余度
+DEFAULT_LISTEN_TIMEOUT = 2*60*60
 # DEFAULT_LISTEN_TIMEOUT = 140
 
 # 返回状态值

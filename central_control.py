@@ -1,3 +1,4 @@
+import math
 import time
 from typing import Tuple
 from rpyc import Service
@@ -21,13 +22,23 @@ windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简
 
 整体策略：
 1.维护一个生产者任务队列，所有过来的任务，都放到该队列中。
-2.维护一个消费者调度器，负责依据实际执行任务服务的情况，将待处理任务分配给有能力且空闲下来的执行单元进行处理。
+2.维护一个消费者调度器，负责依据实际执行任务服务的空闲繁忙情况，将待处理任务分配给有能力且空闲下来的执行单元进行处理。
 3.执行单元处理完毕后，要通知消费者调度器，然后由消费者调度器通知原始调用程序，完成一次任务的闭环。
+
+实现要点：
+1.定时刷新可调用执行单元；
+2.对于处于空闲状态，且后续刷新时已不存在的执行单元，直接清理掉；
+3.对于处于繁忙状态，且后续刷新时已不存在的执行单元，设置超时时间，超时后也要清理该执行单元；
 '''
 
-# 默认监听超时时间
+# 默认监听超时时间，对触发编译客户端的超时时间
 DEFAULT_LISTEN_TIMEOUT = 8*60*60
 # DEFAULT_LISTEN_TIMEOUT = 128
+
+
+# 默认清理超时时间，用于清理编译执行单元
+DEFAULT_CLEAR_TIMEOUT = 3*60*60
+
 
 # 返回状态值
 CODE_SUCCESS = 0
@@ -84,6 +95,7 @@ class Consumer:
         self.producer = producer
         self.unit_name = unit_name
         self.record = dict()
+        self.time_record = dict()
         self.lock = threading.Lock()
 
     def process(self):
@@ -108,6 +120,7 @@ class Consumer:
                             thread = threading.Thread(target=self.sub_processor, args=(item, node))
                             thread.start()
                             self.record[item] += 1
+                            self.time_record[item] = int(time.time())
             except rpyc.utils.factory.DiscoveryError:
                 print_t(f'not found server with name {self.unit_name}!')
                 
@@ -123,6 +136,7 @@ class Consumer:
         param = node[Flag.data]
         try:
             result = conn.root.compile(param)
+            self.time_record[item] = None
         except TimeoutError:
             result = (CODE_FAILED, 'call compile timeout in central_control!')
             
@@ -149,6 +163,7 @@ class Consumer:
             for item in server_map:
                 if item not in self.record:
                     self.record[item] = 0
+                    self.time_record[item] = None
             
             # 对于已经消失的服务节点，如果当前处于闲置状态，则清除出去。
             to_del_list = list()
@@ -156,9 +171,14 @@ class Consumer:
                 if item not in server_map:
                     if self.record[item] <= 0:
                         to_del_list.append(item)
+                    else:
+                        curr_time = int(time.time())
+                        if math.fabs(curr_time - self.time_record[item]) >= DEFAULT_CLEAR_TIMEOUT:
+                            to_del_list.append(item)
 
             for k in to_del_list:
                 del self.record[k]
+                del self.time_record[k]
 
     def get_server_key(self, item):
         ip = item[0]

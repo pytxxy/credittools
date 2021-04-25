@@ -1,12 +1,9 @@
+import time
 from typing import Tuple
 import unittest
-import os
-import time
-import tempfile
-import shutil
-import central_control
+from unittest.mock import Mock, MagicMock, patch
 from central_control import Producer, Consumer
-import creditutils.file_util as file_util
+
 
 class Test(unittest.TestCase):
 
@@ -107,12 +104,17 @@ class Test(unittest.TestCase):
         c = (('192.168.1.101', 18861),)
         k = self.consumer.get_server_key(b[1])
         self.consumer.record[k] += 1
-        self.consumer.update_server(c)
-        target = dict()
-        j = self.consumer.get_server_key(c[0])
-        target[j] = 0
-        target[k] = 1
-        self.assertEqual(self.consumer.record, target, f'record: {self.consumer.record}, target: {target}')
+        curr_time = int(time.time())
+        self.consumer.time_record[k] = curr_time
+        time_fun = Mock(return_value=curr_time+100)
+        with patch.object(time, 'time', time_fun) as mock_method:
+            self.consumer.update_server(c)
+            target = dict()
+            j = self.consumer.get_server_key(c[0])
+            target[j] = 0
+            target[k] = 1
+            self.assertEqual(self.consumer.record, target, f'record: {self.consumer.record}, target: {target}')
+            mock_method.assert_called_once()
 
         d = (('192.168.1.101', 18861),)
         k = self.consumer.get_server_key(b[1])
