@@ -18,7 +18,7 @@ import creditutils.file_util as file_util
 import pprint
 # import traceback
 import creditutils.str_util as str_utils
-import creditutils.trivial_util as utility
+import creditutils.trivial_util as trivial_util
 import creditutils.git_util as git
 import argparse
 import subprocess
@@ -26,6 +26,8 @@ import xmltodict
 import protect_android_app as protect_app
 import creditutils.zip_util as zip_util
 import creditutils.apk_util as apk_util
+
+from central_control import DEFAULT_LISTEN_TIMEOUT
 
 '''
 The reason services have names is for the service registry: 
@@ -38,14 +40,7 @@ This server listens on a broadcast UDP socket, and will answer to queries about 
 windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简化调用。
 '''
 
-# 默认监听超时时间，以一次编译时间为参照，设置适当的冗余度
-DEFAULT_LISTEN_TIMEOUT = 2*60*60
-# DEFAULT_LISTEN_TIMEOUT = 140
-
-# 返回状态值
-CODE_SUCCESS = 0
-CODE_FAILED = 1
-
+_input_args = dict()
 
 class LocalLogger:
     lock = threading.Lock()
@@ -53,7 +48,7 @@ class LocalLogger:
     instance = None
 
     @staticmethod
-    def get_logger_with_path(target_dir='/data/log/app_server', to_console=True):
+    def get_logger_with_path(target_dir, to_console=True):
         with LocalLogger.lock:
             today = datetime.datetime.now().strftime('%Y%m%d')
             log_path = os.path.join(os.path.abspath(target_dir), f'{today}.log')
@@ -84,23 +79,32 @@ class LocalLogger:
 
             return LocalLogger.instance
 
+    @staticmethod
+    def reset_handlers():
+        # 重置handlers，以免重复输出日志
+        logger = LocalLogger.instance
+        if logger.hasHandlers():
+            logger.handlers.clear()
+
 
 def get_logger():
-    return LocalLogger.get_logger_with_path()
-
+    return LocalLogger.get_logger_with_path(_input_args['log_dir'])
 
 def log_info(data):
     get_logger().info(data)
+    LocalLogger.reset_handlers()
 
 def log_debug(data):
-    get_logger().debug(data)
+    get_logger().debug(data)    
+    LocalLogger.reset_handlers()
 
 def log_warn(data):
     get_logger().warn(data)
+    LocalLogger.reset_handlers()
 
 def log_error(data):
     get_logger().error(data)
-
+    LocalLogger.reset_handlers()
 
 _system = platform.system()
 if _system == 'Windows':
@@ -418,7 +422,7 @@ class BuildManager:
 
     __APK_OUTPUT_PATH_PATTERN = '^([\d\.]+(?:(?:beta_\w+_\d+)|(?:_\w+))?)-(\d+)(?:-debug)?-(\d+)\.apk$'
 
-    def __init__(self, args):
+    def __init__(self, args, work_path):
         # 先将输入的控制参数全部存储为成员变量
         # 透传过来的数据类型为“netref class 'rpyc.core.netref.type'”，不支持dict的方法items，需要换成键访问方式
         # for name, value in args.items():
@@ -428,7 +432,7 @@ class BuildManager:
 
         # pprint.pprint(vars(self))
 
-        self.work_path = os.path.abspath('/data/android/auto_build/pytxxy')
+        self.work_path = os.path.abspath(work_path)
 
         # 解析基础配置文件路径
         base_config_dirs = ['config', 'base', 'update_config.xml']
@@ -615,7 +619,7 @@ class BuildManager:
         self.prj_root = git.get_git_root(self.project_code_path)
         main_prj_path = os.path.join(self.prj_root, main_prj_name)
         self.prj_code_ver = git.get_revision(self.prj_root)
-        log_error('current code version is ' + self.prj_code_ver)
+        log_info('current code version is ' + self.prj_code_ver)
 
         # 下面这部分代码依赖于前面成员变量的初始化，请不要随意调整执行位置
         if self.to_update:
@@ -748,7 +752,7 @@ class AppService(Service):
 
     def __init__(self) -> None:
         super().__init__()
-        log_info('init success.')
+        log_info(f'{self.get_service_name().lower()} init success.')
 
     def exposed_compile(self, data) -> Tuple[int, str]:
         '''
@@ -759,7 +763,7 @@ class AppService(Service):
         try:
             log_info(str(data))
             log_info(f'type(data): {type(data)}')
-            manager = BuildManager(data)
+            manager = BuildManager(data, _input_args['work_path'])
             manager.process()
             # time.sleep(150)
             code = 0
@@ -778,9 +782,20 @@ def start_server():
     s.start()
 
 
-def main():
+def main(args):
+    for name, value in vars(args).items():
+        _input_args[name] = value
     start_server()
 
 
+# 对输入参数进行解析，设置相应参数
+def get_args(src_args=None):
+    parser = argparse.ArgumentParser(description='config log dir and work path')
+    parser.add_argument('-d', dest='log_dir', help='logs dir', default='/data/log/app_server')
+    parser.add_argument('-p', dest='work_path', help='work path', default='/data/android/auto_build/pytxxy')
+    return parser.parse_args(src_args)
+
 if __name__ == '__main__':
-    main()
+    test_args = None
+    args = get_args(test_args)
+    trivial_util.measure_time(main, args)

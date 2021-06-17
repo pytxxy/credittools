@@ -1,5 +1,5 @@
 import argparse
-from central_control import CODE_FAILED
+from central_control import CODE_FAILED, DEFAULT_REQUEST_TIMEOUT
 import time
 import rpyc
 import creditutils.trivial_util as trivial_util
@@ -8,11 +8,14 @@ class BuilderLabel:
     DEFAULT_CHAN = 'pycredit'
 
 def connect_with_name(data):
-    conn = rpyc.connect_by_service('central_control')
+    conn = rpyc.connect_by_service('central_control', config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
     try:
+        print(f'connected {conn.root.get_service_name().lower()} then wait for processing...')
         result = conn.root.process(data)
     except TimeoutError:
         result = (CODE_FAILED, 'call process timeout in app_client!')
+    except ConnectionResetError or EOFError:
+        result = (CODE_FAILED, 'remote connection closed in app_client!')
 
     print(f'result: {result}')
     # time.sleep(4)

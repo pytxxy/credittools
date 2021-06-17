@@ -33,12 +33,12 @@ windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简
 
 # 默认监听超时时间，对触发编译客户端的超时时间
 DEFAULT_LISTEN_TIMEOUT = 8*60*60
-# DEFAULT_LISTEN_TIMEOUT = 128
 
+#对触发编译客户端的超时时间，尽量以一次编译时间为参照，设置适当的冗余度
+DEFAULT_REQUEST_TIMEOUT = 20*60*60
 
 # 默认清理超时时间，用于清理编译执行单元
 DEFAULT_CLEAR_TIMEOUT = 3*60*60
-
 
 # 返回状态值
 CODE_SUCCESS = 0
@@ -91,12 +91,13 @@ class Producer:
 
 
 class Consumer:
-    def __init__(self, producer, unit_name='execution_unit') -> None:
+    def __init__(self, producer, service_name='execution_unit') -> None:
         self.producer = producer
-        self.unit_name = unit_name
+        self.service_name = service_name
         self.record = dict()
         self.time_record = dict()
         self.lock = threading.Lock()
+        self.discovery_error = False
 
     def process(self):
         thread = threading.Thread(target=self.processor)
@@ -111,7 +112,8 @@ class Consumer:
         to_wait = 0.1
         while True:
             try:
-                result = rpyc.discover(self.unit_name)
+                result = rpyc.discover(self.service_name)
+                self.discovery_error = False
                 self.update_server(result)
                 with self.lock:
                     for item in self.record:
@@ -122,7 +124,9 @@ class Consumer:
                             self.record[item] += 1
                             self.time_record[item] = int(time.time())
             except rpyc.utils.factory.DiscoveryError:
-                print_t(f'not found server with name {self.unit_name}!')
+                if not self.discovery_error:
+                    self.discovery_error = True
+                    print_t(f'not found server with name {self.service_name}!')
                 
             # 先等待一段时间
             time.sleep(to_wait)
@@ -130,18 +134,26 @@ class Consumer:
     def sub_processor(self, *args, **kwargs):
         item = args[0]
         node = args[1]
-        host, ip = self.get_server_host_ip(item)
-        conn = rpyc.connect(host, ip)
         index = node[Flag.index]
         param = node[Flag.data]
+        host, port = self.get_server_host_ip(item)
+        conn = None
         try:
+            conn = rpyc.connect(host, port, config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
+            service_name = conn.root.get_service_name().lower()
+            print_t(f'{service_name} on {item} will compile.')
             result = conn.root.compile(param)
+            print_t(f'{service_name} on {item} compile completed.')
             self.time_record[item] = None
+        except ConnectionRefusedError:
+            result = (CODE_FAILED, f'{item} connection refused in central_control!')
         except TimeoutError:
-            result = (CODE_FAILED, 'call compile timeout in central_control!')
+            result = (CODE_FAILED, 'call compile() timeout in central_control!')
+        finally:
+            if conn is not None:
+                conn.close()
             
         # print_t(result)
-        conn.close()
         info = self.producer.get_switch_data(index)
         self.producer.task_done()
         info[Flag.data] = result
@@ -195,7 +207,7 @@ class CentralControlService(Service):
 
     def __init__(self) -> None:
         super().__init__()
-        print_t('init success.')
+        print_t(f'{self.get_service_name().lower()} init success.')
 
     def exposed_process(self, data) -> Tuple[int, str]:
         '''
@@ -229,10 +241,12 @@ class CentralControlService(Service):
 
 
 def start_server():
+    print_t('register consumer.')
     producer = Producer.get_instance()
     consumer = Consumer(producer)
     consumer.process()
-    s = ThreadedServer(CentralControlService, port=9999, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
+    print_t('start server.')
+    s = ThreadedServer(CentralControlService, port=9998, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
     s.start()
 
 
