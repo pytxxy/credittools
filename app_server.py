@@ -490,7 +490,9 @@ class BuildManager:
             curr_api_ver = self.api_ver
         else:
             if self.api_ver_config:
-                relative_path = file_util.normalpath(self.api_ver_config[BuildConfigLabel.FILE_ITEM_FLAG])
+                file_item_format = self.api_ver_config[BuildConfigLabel.FILE_ITEM_FLAG]
+                file_item = file_item_format.format(app_code=self.app_code)
+                relative_path = file_util.normalpath(file_item)
                 file_path = os.path.join(self.prj_root, relative_path)
                 target_key = self.api_ver_config[BuildConfigLabel.KEY_FLAG]
                 curr_api_ver = self._get_code_api_ver(file_path, target_key)
@@ -540,8 +542,9 @@ class BuildManager:
         curr_time = time.localtime()
         time_str = time.strftime('%Y%m%d_%H%M%S', curr_time)
 
-        output_directory = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
-            BuildConfigLabel.TARGET_PATH_FLAG])
+        target_path_format = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.TARGET_PATH_FLAG]
+        target_path = target_path_format.format(app_code=self.app_code)
+        output_directory = os.path.join(self.work_path, target_path)
         output_directory = file_util.normalpath(output_directory)
         self.curr_env_output_root = os.path.join(output_directory, self.ver_env)
         output_directory = os.path.join(output_directory, self.ver_env, time_str)
