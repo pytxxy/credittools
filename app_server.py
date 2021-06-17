@@ -795,7 +795,7 @@ def main(args):
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='config log dir and work path')
     parser.add_argument('-d', dest='log_dir', help='logs dir', default='/data/log/app_server')
-    parser.add_argument('-p', dest='work_path', help='work path', default='/data/android/auto_build/pytxxy')
+    parser.add_argument('-p', dest='work_path', help='work path', default='/data/android/auto_build/app')
     return parser.parse_args(src_args)
 
 if __name__ == '__main__':
