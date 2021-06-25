@@ -267,7 +267,7 @@ def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='config log dir and work path')
     parser.add_argument('-sh', dest='server_host', help='local server host name', default=None)
     parser.add_argument('-sp', dest='server_port', help='local server port', default=9999)
-    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default=None)
+    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='255.255.255.255')
     parser.add_argument('-rp', dest='registry_port', help='port which rpyc_registry.py is running', default=REGISTRY_PORT)
     return parser.parse_args(src_args)
 
