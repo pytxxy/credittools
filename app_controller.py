@@ -1,14 +1,15 @@
 import math
 import time
+import argparse
+import threading
+import rpyc
+import creditutils.trivial_util as trivial_util
+from threading import Event
+from queue import Queue
 from typing import Tuple
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
-import threading
-from threading import Event
-from queue import Queue
-import rpyc
-from creditutils.trivial_util import print_t
-
+from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
 
 '''
 The reason services have names is for the service registry: 
@@ -43,6 +44,8 @@ DEFAULT_CLEAR_TIMEOUT = 3*60*60
 # 返回状态值
 CODE_SUCCESS = 0
 CODE_FAILED = 1
+
+_input_args = dict()
 
 class Flag:
     index = 'index'
@@ -126,7 +129,7 @@ class Consumer:
             except rpyc.utils.factory.DiscoveryError:
                 if not self.discovery_error:
                     self.discovery_error = True
-                    print_t(f'not found server with name {self.service_name}!')
+                    trivial_util.print_t(f'not found server with name {self.service_name}!')
                 
             # 先等待一段时间
             time.sleep(to_wait)
@@ -141,9 +144,9 @@ class Consumer:
         try:
             conn = rpyc.connect(host, port, config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
             service_name = conn.root.get_service_name().lower()
-            print_t(f'{service_name} on {item} will compile.')
+            trivial_util.print_t(f'{service_name} on {item} will compile.')
             result = conn.root.compile(param)
-            print_t(f'{service_name} on {item} compile completed.')
+            trivial_util.print_t(f'{service_name} on {item} compile completed.')
             self.time_record[item] = None
         except ConnectionRefusedError:
             result = (CODE_FAILED, f'{item} connection refused in central_control!')
@@ -153,7 +156,7 @@ class Consumer:
             if conn is not None:
                 conn.close()
             
-        # print_t(result)
+        # trivial_util.print_t(result)
         info = self.producer.get_switch_data(index)
         self.producer.task_done()
         info[Flag.data] = result
@@ -207,7 +210,7 @@ class CentralControlService(Service):
 
     def __init__(self) -> None:
         super().__init__()
-        print_t(f'{self.get_service_name().lower()} init success.')
+        trivial_util.print_t(f'{self.get_service_name().lower()} init success.')
 
     def exposed_process(self, data) -> Tuple[int, str]:
         '''
@@ -226,13 +229,13 @@ class CentralControlService(Service):
         target[Flag.index] = index
         target[Flag.data] = data
 
-        print_t('to put queue.')
+        trivial_util.print_t('to put queue.')
         producer.put(target)
 
-        print_t('wait to been processed.')
+        trivial_util.print_t('wait to been processed.')
         info[Flag.event].wait()
 
-        print_t('process completed.')
+        trivial_util.print_t('process completed.')
         result = info[Flag.data]
 
         producer.del_switch_data(index)
@@ -241,18 +244,34 @@ class CentralControlService(Service):
 
 
 def start_server():
-    print_t('register consumer.')
+    trivial_util.print_t('register consumer.')
     producer = Producer.get_instance()
     consumer = Consumer(producer)
     consumer.process()
-    print_t('start server.')
-    s = ThreadedServer(CentralControlService, port=9998, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
+    trivial_util.print_t('start server.')
+
+    args = _input_args
+    registrar = UDPRegistryClient(ip = args['registry_host'], port=args['registry_port'])
+    s = ThreadedServer(CentralControlService, hostname=args['server_host'], port=args['server_port'], registrar=registrar, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
     s.start()
 
 
-def main():
+def main(args):
+    for name, value in vars(args).items():
+        _input_args[name] = value
     start_server()
 
 
+# 对输入参数进行解析，设置相应参数
+def get_args(src_args=None):
+    parser = argparse.ArgumentParser(description='config log dir and work path')
+    parser.add_argument('-sh', dest='server_host', help='local server host name', default=None)
+    parser.add_argument('-sp', dest='server_port', help='local server port', default=9999)
+    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='255.255.255.255')
+    parser.add_argument('-rp', dest='registry_port', help='port which rpyc_registry.py is running', default=REGISTRY_PORT)
+    return parser.parse_args(src_args)
+
 if __name__ == '__main__':
-    main()
+    test_args = None
+    args = get_args(test_args)
+    trivial_util.measure_time(main, args)

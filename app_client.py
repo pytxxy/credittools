@@ -1,6 +1,6 @@
 import argparse
 import sys
-from central_control import CODE_FAILED, DEFAULT_REQUEST_TIMEOUT
+from app_controller import CODE_FAILED, DEFAULT_REQUEST_TIMEOUT
 import rpyc
 import creditutils.trivial_util as trivial_util
 

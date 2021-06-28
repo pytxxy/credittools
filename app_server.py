@@ -1,33 +1,31 @@
-import threading
-from typing import Tuple
-from rpyc import Service
-from rpyc.utils.server import ThreadedServer
-from creditutils.trivial_util import print_t
 import os
 import time
 import re
-from enum import IntEnum
 import platform
 import shutil
-import logging
-import datetime
-
-import ftp_upload
-import creditutils.apk_builder_util as apk_builder
-import creditutils.file_util as file_util
 import pprint
-# import traceback
-import creditutils.str_util as str_utils
-import creditutils.trivial_util as trivial_util
-import creditutils.git_util as git
+import ftp_upload
 import argparse
 import subprocess
 import xmltodict
-import protect_android_app as protect_app
-import creditutils.zip_util as zip_util
-import creditutils.apk_util as apk_util
+import logging
+import datetime
+import threading
 
-from central_control import DEFAULT_LISTEN_TIMEOUT
+import creditutils.apk_builder_util as apk_builder
+import creditutils.file_util as file_util
+import creditutils.str_util as str_utils
+import creditutils.trivial_util as trivial_util
+import creditutils.git_util as git
+import creditutils.apk_util as apk_util
+import protect_android_app as protect_app
+
+from typing import Tuple
+from rpyc import Service
+from rpyc.utils.server import ThreadedServer
+from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
+from app_controller import DEFAULT_LISTEN_TIMEOUT
+
 
 '''
 The reason services have names is for the service registry: 
@@ -41,6 +39,7 @@ windows 下面可使用网盘“/develop/python/rpyc/runpy.bat”文件，可简
 '''
 
 _input_args = dict()
+
 
 class LocalLogger:
     lock = threading.Lock()
@@ -60,7 +59,7 @@ class LocalLogger:
                 os.makedirs(parent)
 
             logger = logging.getLogger(__name__)
-            logger.setLevel(level = logging.INFO)
+            logger.setLevel(level=logging.INFO)
             handler = logging.FileHandler(log_path)
             handler.setLevel(logging.INFO)
             formatter = logging.Formatter('%(asctime)s-%(name)s-%(levelname)s: %(message)s')
@@ -69,9 +68,10 @@ class LocalLogger:
 
             if to_console:
                 # 设置输出到控制台
-                handler_console = logging.StreamHandler() # 输出到控制台的handler
+                handler_console = logging.StreamHandler()  # 输出到控制台的handler
                 handler_console.setFormatter(formatter)
-                handler_console.setLevel(logging.INFO)  # 也可以不设置，不设置就默认用logger的level
+                # 也可以不设置，不设置就默认用logger的level
+                handler_console.setLevel(logging.INFO)
                 logger.addHandler(handler_console)
 
             LocalLogger.whole_path = log_path
@@ -90,21 +90,26 @@ class LocalLogger:
 def get_logger():
     return LocalLogger.get_logger_with_path(_input_args['log_dir'])
 
+
 def log_info(data):
     get_logger().info(data)
     LocalLogger.reset_handlers()
 
+
 def log_debug(data):
-    get_logger().debug(data)    
+    get_logger().debug(data)
     LocalLogger.reset_handlers()
+
 
 def log_warn(data):
     get_logger().warn(data)
     LocalLogger.reset_handlers()
 
+
 def log_error(data):
     get_logger().error(data)
     LocalLogger.reset_handlers()
+
 
 _system = platform.system()
 if _system == 'Windows':
@@ -116,6 +121,7 @@ elif _system == 'Linux':
 else:
     _system_pre = 'bash '
     _system_suffix = ''
+
 
 class BuilderLabel:
     PRJ_ROOT_FLAG = 'prj_root'
@@ -174,14 +180,14 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
-               'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
+                     'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
 
-    extend_map_key = {'API_VERSION':'api_ver', 'JPUSH_APPKEY':'jpush_appkey'}
+    extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
     cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
-                      '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
-                      '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
+        '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
+        '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
+        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
 
     def __init__(self):
         # 先初始化默认值
@@ -291,7 +297,8 @@ class ProjectBuilder:
         self.main_prj_path = os.path.join(self.prj_root, self.main_prj_name)
         self.info = info
 
-        self.manifest_path = os.path.join(self.main_prj_path, 'AndroidManifest.xml')
+        self.manifest_path = os.path.join(
+            self.main_prj_path, 'AndroidManifest.xml')
 
     # 更新通用信息
     def update_info(self):
@@ -304,7 +311,7 @@ class ProjectBuilder:
     def _get_output_relative_path(self):
         # 网络环境配置
         ori_net_env = self.info[BuilderLabel.NET_ENV_FLAG]
-        app_code = self.info[BuilderLabel.APP_CODE_FLAG] 
+        app_code = self.info[BuilderLabel.APP_CODE_FLAG]
         net_env = self.info[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
 
         # 配置为Release还是Debug模式
@@ -326,8 +333,7 @@ class ProjectBuilder:
         # 默认名称形式
         # apk_path = '{}{}-{}.apk'.format(apk_out_path, apk_name, build_type)
         # 自定义名称形式
-        apk_path = os.path.join(apk_out_path, self._get_output_relative_path(),
-                                self.info[BuilderLabel.OUTPUT_NAME_FLAG])
+        apk_path = os.path.join(apk_out_path, self._get_output_relative_path(), self.info[BuilderLabel.OUTPUT_NAME_FLAG])
         apk_path = os.path.normpath(apk_path)
 
         # 先把现有的apk文件直接删除
@@ -345,19 +351,16 @@ class ProjectBuilder:
 
             actual_ver_name = self.get_main_ver_name(apk_items['versionName'])
             if actual_ver_name != self.info[BuilderLabel.VER_NAME_FLAG]:
-                info = 'set version name is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_NAME_FLAG],
-                                                                          actual_ver_name)
+                info = 'set version name is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_NAME_FLAG], actual_ver_name)
                 log_error(info)
                 raise Exception(info)
 
             if apk_items['versionCode'] != str(self.info[BuilderLabel.VER_CODE_FLAG]):
-                info = 'set version code is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_CODE_FLAG],
-                                                                          apk_items['versionCode'])
+                info = 'set version code is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_CODE_FLAG], apk_items['versionCode'])
                 log_error(info)
                 raise Exception(info)
 
-            dst_file = self.info[BuilderLabel.OUTPUT_DIRECTORY_FLAG] + os.sep + self.info[
-                BuilderLabel.OUTPUT_NAME_FLAG]
+            dst_file = self.info[BuilderLabel.OUTPUT_DIRECTORY_FLAG] + os.sep + self.info[BuilderLabel.OUTPUT_NAME_FLAG]
             file_util.replace_file(src_file, dst_file)
 
             log_info('built the apk {}.'.format(dst_file))
@@ -445,8 +448,7 @@ class BuildManager:
         self.ori_build_config = configParser.get_config()
 
         # project目录
-        ori_project_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
-            BuildConfigLabel.PRJ_PATH_FLAG])
+        ori_project_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.PRJ_PATH_FLAG])
         self.project_path = file_util.normalpath(ori_project_path)
 
         self.api_ver_config = None
@@ -512,19 +514,17 @@ class BuildManager:
         params = dict()
 
         params[BuilderLabel.PRJ_ROOT_FLAG] = self.prj_root
-        params[BuilderLabel.MAIN_FLAG] = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
-            BuildConfigLabel.MAIN_FLAG]
+        params[BuilderLabel.MAIN_FLAG] = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.MAIN_FLAG]
 
         params[BuilderLabel.CHANNEL_FLAG] = self.channel
 
         params[BuilderLabel.NET_ENV_FLAG] = self.ver_env
-        params[BuilderLabel.ENV_MODE_FLAG] = \
-            self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
+        params[BuilderLabel.ENV_MODE_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
         params[BuilderLabel.ARM64_FLAG] = self.is_arm64
         params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
         params[BuilderLabel.JPUSH_APPKEY_FLAG] = self.jpush_appkey
-        
+
         # 获取网络api version配置信息
         if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:
             self.api_ver_config = self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.API_VER_FLAG]
@@ -574,18 +574,16 @@ class BuildManager:
             mode_flag = apk_builder.DEBUG_FLAG
 
             # 指定输出apk名称
-            params[BuilderLabel.OUTPUT_NAME_FLAG] = "{}-{}-{}-{}.apk".format(self.whole_ver_name, self.ver_code,
-                                                                             mode_flag,
-                                                                             date_str)
+            params[BuilderLabel.OUTPUT_NAME_FLAG] = "{}-{}-{}-{}.apk".format(self.whole_ver_name, self.ver_code, mode_flag, date_str)
         else:
             mode_flag = apk_builder.RELEASE_FLAG
 
             # 指定输出apk名称
-            params[BuilderLabel.OUTPUT_NAME_FLAG] = "{}-{}-{}.apk".format(self.whole_ver_name, self.ver_code, date_str)
+            params[BuilderLabel.OUTPUT_NAME_FLAG] = "{}-{}-{}.apk".format(
+                self.whole_ver_name, self.ver_code, date_str)
 
         params[BuilderLabel.TYPE_FLAG] = mode_flag
-        self.apk_output_path = os.path.join(params[BuilderLabel.OUTPUT_DIRECTORY_FLAG],
-                                            params[BuilderLabel.OUTPUT_NAME_FLAG])
+        self.apk_output_path = os.path.join(params[BuilderLabel.OUTPUT_DIRECTORY_FLAG], params[BuilderLabel.OUTPUT_NAME_FLAG])
 
         pprint.pprint(params)
 
@@ -678,8 +676,7 @@ class BuildManager:
     def _update_local_build_file(self):
         # 更新android sdk本地配置
         local_file_name = 'local.properties'
-        static_config_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.ROOT_FLAG][
-            BuildConfigLabel.STATIC_FLAG])
+        static_config_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.ROOT_FLAG][BuildConfigLabel.STATIC_FLAG])
         static_config_path = file_util.normalpath(static_config_path)
         local_build_file = os.path.join(static_config_path, local_file_name)
         target_build_file = os.path.join(self.prj_root, local_file_name)
@@ -688,8 +685,7 @@ class BuildManager:
     # 将编译信息写到文件中
     def _write_build_info(self):
         build_info_format = self.ori_build_config[BuildConfigLabel.BUILD_INFO_TEMPLET_FLAG]
-        build_info = build_info_format.format(ver_name=self.whole_ver_name, code_ver=self.prj_code_ver,
-                                              ver_code=self.ver_code)
+        build_info = build_info_format.format(ver_name=self.whole_ver_name, code_ver=self.prj_code_ver, ver_code=self.ver_code)
         readme_file_name = 'readme-{}-{}.txt'.format(self.whole_ver_name, self.ver_code)
         build_info_path = os.path.join(self.output_directory, readme_file_name)
         file_util.write_to_file(build_info_path, build_info, encoding='utf-8')
@@ -707,13 +703,12 @@ class BuildManager:
         else:
             to_sign_path = protected_path
 
-        keystore = os.path.join(main_prj_path, self.pro_build_config[BuilderLabel.SIGNER_FLAG][
-            BuilderLabel.KEYSTORE_FLAG])
+        keystore = os.path.join(main_prj_path, self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.KEYSTORE_FLAG])
         keystore = os.path.abspath(file_util.normalpath(keystore))
         storepass = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREPASS_FLAG]
         storealias = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREALIAS_FLAG]
         signed_path = apk_util.get_default_signed_path(protected_path)
-        rtn = apk_util.sign_apk(keystore, storepass, storealias, to_sign_path, signed_path)
+        rtn = apk_util.sign_apk(keystore, storepass,storealias, to_sign_path, signed_path)
         if rtn:
             str_info = 'Protect {} and sign success.'.format(self.apk_output_path)
             source_name = os.path.basename(signed_path)
@@ -725,7 +720,7 @@ class BuildManager:
 
         return source_name
 
-    def _upload_file(self, source_name, target_name, to_upload_path, desc_data = None):
+    def _upload_file(self, source_name, target_name, to_upload_path, desc_data=None):
         result = re.match(BuildManager.__APK_OUTPUT_PATH_PATTERN, target_name)
         if result:
             ver_name_info = result.group(1)
@@ -734,7 +729,7 @@ class BuildManager:
             log_error(str_info)
             raise Exception(str_info)
 
-        channel = '' # 调用的接口内部实现默认是空串
+        channel = ''  # 调用的接口内部实现默认是空串
         if self.channel != BuilderLabel.DEFAULT_CHAN:
             channel = self.channel
 
@@ -745,9 +740,7 @@ class BuildManager:
         log_info(f'source_name: {source_name}')
         log_info(f'channel: {channel}')
 
-        ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, self.app_code,
-                                  to_upload_path, mobile_os='Android', channel=channel, target_file_name=target_name,
-                                  source_file_name=source_name, desc_data=desc_data)
+        ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, self.app_code, to_upload_path, mobile_os='Android', channel=channel, target_file_name=target_name, source_file_name=source_name, desc_data=desc_data)
 
 
 class AppService(Service):
@@ -781,7 +774,9 @@ class AppService(Service):
 
 def start_server():
     obj = AppService()
-    s = ThreadedServer(obj, port=9999, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
+    args = _input_args
+    registrar = UDPRegistryClient(ip=args['registry_host'], port=args['registry_port'])
+    s = ThreadedServer(obj, hostname=args['server_host'], port=args['server_port'], registrar=registrar, auto_register=True, listener_timeout=DEFAULT_LISTEN_TIMEOUT)
     s.start()
 
 
@@ -794,9 +789,14 @@ def main(args):
 # 对输入参数进行解析，设置相应参数
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='config log dir and work path')
-    parser.add_argument('-d', dest='log_dir', help='logs dir', default='/data/log/app_server')
-    parser.add_argument('-p', dest='work_path', help='work path', default='/data/android/auto_build/app')
+    parser.add_argument('-ld', dest='log_dir', help='dir which logs stores in', default='/data/log/app_server')
+    parser.add_argument('-wp', dest='work_path', help='work path which package app', default='/data/android/auto_build/app')
+    parser.add_argument('-sh', dest='server_host', help='local server host name', default=None)
+    parser.add_argument('-sp', dest='server_port', help='local server port', default=9998)
+    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='255.255.255.255')
+    parser.add_argument('-rp', dest='registry_port', help='port which rpyc_registry.py is running', default=REGISTRY_PORT)
     return parser.parse_args(src_args)
+
 
 if __name__ == '__main__':
     test_args = None
