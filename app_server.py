@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import re
 import platform
@@ -24,7 +25,7 @@ from typing import Tuple
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
-from app_controller import DEFAULT_LISTEN_TIMEOUT
+from app_controller import DEFAULT_LISTEN_TIMEOUT, CODE_SUCCESS, CODE_FAILED
 
 
 '''
@@ -762,12 +763,11 @@ class AppService(Service):
             manager = BuildManager(data, _input_args['work_path'])
             manager.process()
             # time.sleep(150)
-            code = 0
+            code = CODE_SUCCESS
             msg = 'success'
-        except Exception as e:
-            code = 0
-            # msg = 'failed'
-            msg = str(e)
+        except:
+            code = CODE_FAILED
+            msg = f'errors in app_server: {sys.exc_info()}'
 
         return code, msg
 

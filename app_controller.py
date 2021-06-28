@@ -1,3 +1,4 @@
+import sys
 import math
 import time
 import argparse
@@ -148,18 +149,15 @@ class Consumer:
             result = conn.root.compile(param)
             trivial_util.print_t(f'{service_name} on {item} compile completed.')
             self.time_record[item] = None
-        except ConnectionRefusedError:
-            result = (CODE_FAILED, f'{item} connection refused in central_control!')
-        except TimeoutError:
-            result = (CODE_FAILED, 'call compile() timeout in central_control!')
+        except:
+            result = (CODE_FAILED, f'errors in app_controller: {sys.exc_info()}')
         finally:
             if conn is not None:
                 conn.close()
             
-        # trivial_util.print_t(result)
         info = self.producer.get_switch_data(index)
         self.producer.task_done()
-        info[Flag.data] = result
+        info[Flag.data] = result + (host, )
         info[Flag.event].set()
         with self.lock:
             self.record[item] -= 1
