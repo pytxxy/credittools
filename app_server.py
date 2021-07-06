@@ -21,7 +21,7 @@ import creditutils.git_util as git
 import creditutils.apk_util as apk_util
 import protect_android_app as protect_app
 
-from typing import Tuple
+from typing import Dict
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
@@ -751,7 +751,7 @@ class AppService(Service):
         super().__init__()
         log_info(f'{self.get_service_name().lower()} init success.')
 
-    def exposed_compile(self, data) -> Tuple[int, str]:
+    def exposed_compile(self, data) -> Dict:
         '''
         编译完成后输出结果
         :param data: 编译参数
@@ -759,7 +759,6 @@ class AppService(Service):
         '''
         try:
             log_info(str(data))
-            log_info(f'type(data): {type(data)}')
             manager = BuildManager(data, _input_args['work_path'])
             manager.process()
             # time.sleep(150)
@@ -769,7 +768,7 @@ class AppService(Service):
             code = CODE_FAILED
             msg = f'errors in app_server: {sys.exc_info()}'
 
-        return code, msg
+        return {'code': code, 'msg': msg}
 
 
 def start_server():

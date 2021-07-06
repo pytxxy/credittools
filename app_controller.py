@@ -7,7 +7,7 @@ import rpyc
 import creditutils.trivial_util as trivial_util
 from threading import Event
 from queue import Queue
-from typing import Tuple
+from typing import Dict
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
@@ -142,6 +142,7 @@ class Consumer:
         param = node[Flag.data]
         host, port = self.get_server_host_ip(item)
         conn = None
+        result = {}
         try:
             conn = rpyc.connect(host, port, config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
             service_name = conn.root.get_service_name().lower()
@@ -150,14 +151,14 @@ class Consumer:
             trivial_util.print_t(f'{service_name} on {item} compile completed.')
             self.time_record[item] = None
         except:
-            result = (CODE_FAILED, f'errors in app_controller: {sys.exc_info()}')
-        finally:
-            if conn is not None:
-                conn.close()
+            result = {'code': CODE_FAILED, 'msg': f'errors in app_controller: {sys.exc_info()}'}
             
         info = self.producer.get_switch_data(index)
         self.producer.task_done()
-        info[Flag.data] = result + (host, )
+        target = dict()
+        for k in result:
+            target[k] = result[k]
+        info[Flag.data] = dict({'host': f'{host}:{port}'}, **target)
         info[Flag.event].set()
         with self.lock:
             self.record[item] -= 1
@@ -210,7 +211,7 @@ class CentralControlService(Service):
         super().__init__()
         trivial_util.print_t(f'{self.get_service_name().lower()} init success.')
 
-    def exposed_process(self, data) -> Tuple[int, str]:
+    def exposed_process(self, data) -> Dict:
         '''
         实现Android版本的编译
         :param data: 所有调用编译需要用到的参数
