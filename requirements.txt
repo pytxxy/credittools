@@ -1,0 +1,4 @@
+xmltodict
+pycurl
+creditutils
+requests
