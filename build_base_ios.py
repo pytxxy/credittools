@@ -15,7 +15,8 @@ import shutil
 import creditutils.zip_util as myzip
 import tempfile
 import traceback
-
+import xml.etree.ElementTree as ET
+import sys
 
 # 更改plist文件指定键的值
 def update_plist_item(info_plist_path, key, value):
@@ -102,6 +103,10 @@ class BuildManager:
             setattr(self, name, value)
         # pprint.pprint(vars(self))
 
+        self.temp_username = ''
+        self.temp_password = ''
+        self.sftp_config_path = ''
+
         self.work_path = os.path.abspath(self.work_path)
 
         # 解析基础配置文件路径
@@ -127,18 +132,7 @@ class BuildManager:
         self.pods_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.PODS_PATH]
         self.init_ruby_path = self.project_path + os.sep + self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][BuildConfigParser.INIT_RUBY_PAYH]
 
-        # 代码扫描脚本目录
-        # self.is_open_converage = False
-        # env = self._get_detail_env(self.ver_env)
-        # if BuildConfigParser.COVERAGE_FLAG in self.ori_build_config:
-        #     coverage_list_dict = self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][BuildConfigParser.COMPLIE_FLAG]
-        #     if env in coverage_list_dict:
-        #         if coverage_list_dict[env].lower() == str('true'):
-        #             self.is_open_converage = True
-        # if self.is_open_converage:
-        #     coverage_shell_path = self.project_path + os.sep + self.ori_build_config[BuildConfigParser.COVERAGE_FLAG][
-        #         BuildConfigParser.COVERRAGE_SHELL_PATH]
-        #     self.coverage_shell_path = myfile.normalpath(coverage_shell_path)
+
 
     def _get_detail_env(self, ver_env):
         env_list_dict = self.ori_build_config[BuildConfigParser.ENV_LIST_FLAG]
@@ -158,13 +152,20 @@ class BuildManager:
         ipa_path_flag = 'ipa_path'
         output_name_flag = 'output_name'
         export_options_flag = 'export_options'
-
+        xcargs_flag = 'xcargs'
+        bitcode_flag = 'bitcode'
+        symbols_flag = 'symbols'
         if scheme_flag in self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG]:
             params[scheme_flag] = self.app_build_cofig[BuildConfigParser.WORKSPACE_FLAG][scheme_flag]
 
         params[configuration_flag] = self.ori_build_config[BuildConfigParser.ENV_FLAG][self.ver_env][self.ver_type]
         params[export_method_flag] = self.ori_build_config[BuildConfigParser.EXPORT_FLAG][self.ver_type][self.ver_env]
-
+        params[xcargs_flag] = '-allowProvisioningUpdates'
+        params[bitcode_flag] = 'false'
+        params[symbols_flag] = 'false'
+        if self.ver_env == 'flight':
+            params[bitcode_flag] = 'true'
+            params[symbols_flag] = 'true'
         # 判断当前项目是工程集，还是单个工程，再配置相应的参数
         curr_prj_flag = None
         for prj_item in [workspace_flag, project_flag]:
@@ -224,8 +225,9 @@ class BuildManager:
     def build(self, param_map):
         #     str_format = '/usr/local/bin/gym --workspace {workspace} --scheme {scheme} --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name}'
         #     str_format_head = 'fastlane gym --use_legacy_build_api '
+
         str_format_head = 'fastlane gym '
-        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options}'
+        str_format_tail = ' --clean --configuration {configuration} --archive_path {archive_path} --export_method {export_method} --output_directory {output_directory} --output_name {output_name} --export_options {export_options} --xcargs {xcargs} --include_bitcode {bitcode} --include_symbols {symbols}'
         item_format = '--{} {{{}}}'
 
         opt_format_items = []
@@ -260,7 +262,19 @@ class BuildManager:
         if self.to_update:
             code_url = self.app_build_cofig[BuildConfigParser.CODE_URL_FLAG]
             if self.use_git:
+
+                self.sftp_config_path = ['config', 'base', 'sftp_config.xml']
+                self.sftp_config_path = os.sep.join(self.sftp_config_path)
+                self.sftp_config_path = self.work_path + os.sep + self.sftp_config_path
+                doc = xmltodict.parse(myfile.read_file_content(self.sftp_config_path))
+                sftp_config_data = doc['config']
+                self.temp_username = sftp_config_data['username']
+                self.temp_password = sftp_config_data['password']
+
                 git.checkout_or_update(self.project_path, code_url, self.code_ver, self.branch)
+                git.revert_temporary(self.project_path)
+
+
             else:
                 # 根据参数配置svn用户名和密码
                 username_flag = 'svn_user'
@@ -313,6 +327,15 @@ class BuildManager:
             # 将*.ipa包上传到sftp服务器
             if self.to_upload_sftp:
 
+                doc = ET.parse(self.sftp_config_path)
+                root = doc.getroot()
+                username = root.find('username')
+                username.text = self.temp_username
+                password = root.find('password')
+                password.text = self.temp_password
+                doc.write(self.sftp_config_path)
+                print('----------change it--------')
+
                 # 复制podfile.lock 到目标文件夹
                 pods_lock_file = self.pods_path + os.sep + 'Podfile.lock'
                 shutil.copy(pods_lock_file, self.output_directory)
@@ -328,9 +351,42 @@ class BuildManager:
                     if os.path.splitext(file)[1] == '.xcarchive':
                         xcarchive_file_path = os.path.join(self.output_directory, file)
                         shutil.rmtree(xcarchive_file_path)
-
                 sftp.upload_to_sftp(self.work_path, self.ver_name, self.ver_env, self.code_ver, self.app_code, self.output_directory,
                                     'IOS', '', self.ipa_name, self.ipa_name)
+
+        # 复制文件到document
+            ipa_file_path = self.output_directory + os.sep + self.ipa_name
+            ipa_dir_path = myfile.normalpath('/Users/caifh/Documents/ipa')
+            if os.path.exists(ipa_dir_path):
+                shutil.copy(ipa_file_path, ipa_dir_path)
+
+        # 更新工程文件
+            print('更新工程文件')
+            print(self.project_path)
+            new_project_path = self.project_path
+            allfilelist = os.listdir(self.project_path)
+            for file in allfilelist:
+                filepath = os.path.join(self.project_path, file)
+                if os.path.isdir(filepath):
+                    new_project_path = myfile.normalpath(filepath)
+                    break
+            dst_dir = os.path.abspath(new_project_path)
+            os.chdir(dst_dir)
+
+            rtn_str = subprocess.check_output('git diff --name-only --diff-filter=ACM', shell=True, universal_newlines=True)
+            if rtn_str:
+                info_arr = rtn_str.split('\n')
+                new_info_arr = []
+                for item in info_arr:
+                    if len(item) > 0:
+                        new_info_arr.append(item)
+                try:
+                    source_path = git.get_git_root(self.project_path)
+                    git.push_to_remote(new_info_arr, '[other]: 提交打包版本信息', repository=None, refspecs=None, _dir=source_path)
+                    git.revert_temporary(source_path)
+                except Exception as e:
+                    raise Exception(e)
+
 
     # 复制文件到目标文件夹并删除源文件
     def process_func(self, src_file, dst_file):
@@ -391,6 +447,7 @@ def get_args(src_args=None):
                         help='need to upload to sftp Server;')
     parser.add_argument('--branch', metavar='branch', dest='branch', help='branch name')
 
+    parser.add_argument('--nopodupdate', dest='no_update_pod', default=False, help='need to update pod;')
     #     parser.print_help()
 
     return parser.parse_args(src_args)

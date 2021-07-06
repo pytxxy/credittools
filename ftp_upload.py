@@ -51,7 +51,7 @@ class UploadManager:
 
     # 上传 ipa 包或者 apk 包
     def _upload_setup_file(self, sftp_cli, remote_dir, source_file_name, target_file_name):
-        # 判断 sftp 文件夹有没有之前的老包，有的话则需要先删除
+    # 判断 sftp 文件夹有没有之前的老包，有的话则需要先删除
         try:
             sftp_cli.chdir(remote_dir)
             sftp_dir_list = sftp_cli.listdir(remote_dir)
@@ -59,19 +59,21 @@ class UploadManager:
                 if os.path.splitext(filename)[1] == '.ipa':
                     if (target_file_name.find('ent') > 0 and filename.find('ent') > 0) or \
                             (target_file_name.find('ent') == -1 and filename.find('ent') == -1):
-                        sftp_cli.remove(file_util.join_unix_path(remote_dir, filename))
-                        break
+                            print('开始删除')
+                            print(filename)
+                            sftp_cli.remove(filename)
+                            break
                 elif os.path.splitext(filename)[1] == '.apk':
                     sftp_cli.remove(file_util.join_unix_path(remote_dir, filename))
                     break
         except Exception as e:
             print(e)
-
         local_file_path = os.path.join(self.local_dir_path, source_file_name)
 
         result = sftp_util.sftp_upload_file(sftp_cli, remote_dir, local_file_path)
-        sftp_cli.rename(file_util.join_unix_path(remote_dir, source_file_name),
-                        file_util.join_unix_path(remote_dir, target_file_name))
+        if self.mobile_os.lower() == 'android':
+            sftp_cli.rename(file_util.join_unix_path(remote_dir, source_file_name),
+                            file_util.join_unix_path(remote_dir, target_file_name))
         print(result[1])
 
     def _upload_record_file(self, sftp_cli, remote_dir, data, file_name='record.txt'):
@@ -176,6 +178,8 @@ class UploadManager:
         self._upload_record_file(sftp_cli, remote_dir, record_text_data)
 
     def upload_to_sftp(self, target_file_name='', source_file_name='', desc_data=None):
+        print('sftp_user')
+        print(self.config_data[_USERNAME_FLAG])
         sftp_handler = sftp_util.sftp_connect(self.config_data[_HOST_FLAG], self.config_data[_PORT_FLAG],
                                           self.config_data[_USERNAME_FLAG], self.config_data[_PASSWORD_FLAG])
         if sftp_handler[0] == 1:
@@ -190,6 +194,7 @@ class UploadManager:
 
             sftp_cli.close()
         else:
+            raise Exception(sftp_handler[1])
             print(sftp_handler[1])
 
 
@@ -208,17 +213,21 @@ def upload_to_sftp(sftp_config_path, ver_name_code, ver_env, code_version, sftp_
         :param source_file_name: 原始文件名
         :return:
     """
+
     manager = UploadManager(sftp_config_path)
     manager.init_path_config(ver_name_code, ver_env, code_version, sftp_root_tag=sftp_root_tag, local_dir_path=local_dir_path, mobile_os=mobile_os, channel=channel)
     manager.upload_to_sftp(target_file_name=target_file_name, source_file_name=source_file_name, desc_data=desc_data)
 
 
 if __name__ == '__main__':
-    upload_to_sftp(sftp_config_path=r'/Users/apple/Documents/build_script/ios/pytxxy', sftp_root_tag='txxy',ver_name_code='4.0.1beta_t_01',
-                   ver_env='test', code_version='610b85b4d600b266b1c3c2dc6c3c06f789877290', mobile_os='Android',
-                   local_dir_path=r'D:\auto_build\pytxxy\output\test\20190424_093723',
-                   target_file_name='4.0.1beta_t_01-526-20190424.apk',
-                   source_file_name='4.0.1beta_t_01-526-20190424.apk')
+    try:
+        upload_to_sftp(sftp_config_path=r'/Users/apple/Documents/BuildScript/ios/pytxxy', sftp_root_tag='test', ver_name_code='4.0.1beta_t_01',
+                    ver_env='test', code_version='610b85b4d600b266b1c3c2dc6c3c06f789877290', mobile_os='Android',
+                    local_dir_path=r'D:\auto_build\pytxxy\output\test\20190424_093723',
+                    target_file_name='4.0.1beta_t_01-526-20190424.apk',
+                    source_file_name='4.0.1beta_t_01-526-20190424.apk')
+    except Exception as e:
+        raise Exception('upload to ftp Error')
 
     # for s in sys.path:
     #     print(s)

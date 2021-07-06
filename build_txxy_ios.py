@@ -24,10 +24,11 @@ class BuildManager(build_base.BuildManager):
                 podfile_path = self.pods_path + os.sep + 'Podfile'
                 podfile_path = myfile.normalpath(podfile_path)
                 try:
+                    print('开始更新子模块')
                     pod_tag.push_pod_tag_to_remote(self.work_path, podfile_path, ['PYCategory', 'PYLibrary', 'PYTXXYBaseModule', 'PYAccountManager', 'PYPersonIdentify'], self.branch_dict, self.tag_dict)
+                    print('子模块更新结束')
                 except Exception as e:
-                    print('push error')
-                    sys.exit(0)
+                    raise e
 
 
 
@@ -44,7 +45,10 @@ class BuildManager(build_base.BuildManager):
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_update_str, print_flag=True)
             else:
                 exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, cmd_str, print_flag=True)
-            
+
+            if self.no_update_pod:
+                exec_cmd.run_cmd_with_system_in_specified_dir(pod_path, 'pod install --deployment', print_flag=True)
+
         # 先恢复正常的编译配置
         reinit_config_script_path = self.init_ruby_path
         reinit_config_script_path = myfile.normalpath(reinit_config_script_path)
@@ -113,10 +117,11 @@ def get_args(src_args=None):
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan'], help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', help='branch name')
 
-    parser.add_argument('--pushpodtag', dest='to_push_pod_tag', action= 'store_true', default=False, help='need to push pod tag;')
+    parser.add_argument('--pushpodtag', dest='to_push_pod_tag', action='store_true', default=False, help='need to push pod tag;')
     parser.add_argument('--podbranch',  metavar='branch_dict',    type=str,  dest='branch_dict',   default=[], help='pod branch name')
     parser.add_argument('--podtag',     metavar='tag_dict',  type=str,   dest='tag_dict',   help='tag name dict eg:{pod_name:tag_name}')
-    
+
+    parser.add_argument('--nopodupdate', dest='no_update_pod', action='store_true', default=False, help='need to update pod;')
 #     parser.print_help()
 
     return parser.parse_args(src_args)    
