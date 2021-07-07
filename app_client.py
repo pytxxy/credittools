@@ -43,7 +43,7 @@ class Notifier:
 
     def _parse_base_config(self):
         # 解析发送给配置升级人员的配置
-        config_dirs = ['config/base', 'dingtalk_receiver.xml']
+        config_dirs = [f'config{os.sep}base', 'dingtalk_receiver.xml']
         config_path = os.sep.join(config_dirs)
         dingtalk_receiver_path = os.path.join(self.work_path, config_path)
         self.dingtalk_receiver = ConfigParser.parse_config(dingtalk_receiver_path)
