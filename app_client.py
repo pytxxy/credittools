@@ -1,12 +1,10 @@
 import os
 import sys
 import threading
-import time
 import json
 import rpyc
 import argparse
 import xmltodict
-import creditutils.str_util as str_utils
 import creditutils.file_util as file_util
 import creditutils.trivial_util as trivial_util
 import creditutils.dingtalk_util as dingtalk_util
@@ -123,7 +121,6 @@ class AppClient:
     # 连接控制中心服务，分派指定打包机来打包
     def connect_with_name(self, dt):
         conn = None
-        begin = time.time()
         try:
             conn = rpyc.connect_by_service('central_control', config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
             print(f'connected {conn.root.get_service_name().lower()} then wait for processing...')
@@ -132,10 +129,6 @@ class AppClient:
             result = {'code': CODE_FAILED, 'msg': f'errors in app_client: {sys.exc_info()}'}
         print(result)
         
-        # 计算打包耗时
-        end = time.time()
-        cost_time = str_utils.get_time_info(begin, end)
-
         # 组合通知信息
         notify_info = [
             f'# [{self.job_name}]({self.job_url})',
@@ -146,8 +139,9 @@ class AppClient:
             f'> 版本: **{dt["ver_name"]}({dt["ver_code"]})**',
             f'> 转测: **{dt["ver_no"]}**',
             f'> 渠道: **{self.channel}**',
-            f'> 耗时: **{cost_time}**',
         ]
+        if result['cost_time'] is not None:
+            notify_info.append(f'> 耗时: **{result["cost_time"]}**',)
         if result['code'] == CODE_SUCCESS:
             notify_info.append(f'> 状态: **成功**',)
         else:
