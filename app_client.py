@@ -131,7 +131,8 @@ class AppClient:
         
         # 组合通知信息
         notify_info = [
-            f'# [{self.job_name}]({self.job_url})',
+            f'#### [{self.job_name}]({self.job_url})',
+            f'---------------------------------------------------------',
             f'> 任务: **[{self.job_build_name}]({self.job_build_url})**',
             f'> 应用: **{dt["app_code"]}**',
             f'> 分支: **{self.branch}**',
