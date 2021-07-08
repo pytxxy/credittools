@@ -130,26 +130,27 @@ class AppClient:
         print(result)
         
         # 组合通知信息
+        tpl = '{0}: &nbsp;_{1}_'
         notify_info = [
             f'#### [{self.job_name}]({self.job_url})',
             f'---------------------------------------------------------',
-            f'> 任务: **[{self.job_build_name}]({self.job_build_url})**',
-            f'> 应用: **{dt["app_code"]}**',
-            f'> 分支: **{self.branch}**',
-            f'> 环境: **{dt["ver_env"]}**',
-            f'> 版本: **{dt["ver_name"]}({dt["ver_code"]})**',
-            f'> 转测: **{dt["ver_no"]}**',
-            f'> 渠道: **{self.channel}**',
+            tpl.format('任务', f'[{self.job_build_name}]({self.job_build_url})'),
+            tpl.format('应用', dt["app_code"]),
+            tpl.format('分支', self.branch),
+            tpl.format('环境', dt["ver_env"]),
+            tpl.format('版本', f'{dt["ver_name"]}({dt["ver_code"]})'),
+            tpl.format('转测', dt["ver_no"]),
+            tpl.format('渠道', self.channel),
         ]
         if result['cost_time'] is not None:
-            notify_info.append(f'> 耗时: **{result["cost_time"]}**',)
+            notify_info.append(tpl.format('耗时', result["cost_time"]))
         if result['code'] == CODE_SUCCESS:
-            notify_info.append(f'> 状态: **成功**',)
+            notify_info.append(tpl.format('状态', '成功'))
         else:
-            notify_info.append(f'> 状态: **失败**',)
-            notify_info.append(f'> 原因: **{result["msg"]}**')
+            notify_info.append(tpl.format('状态', '失败'))
+            notify_info.append(tpl.format('原因', result["msg"]))
         if result['host'] is not None:
-            notify_info.append(f'> 来源: **{result["host"]}**',)
+            notify_info.append(tpl.format('来源', result["host"]))
 
         # 组合通知信息并发送
         notifier = Notifier(self.work_path)
@@ -208,8 +209,7 @@ def get_args(src_args=None):
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--jpush', metavar='jpush_appkey', dest='jpush_appkey', default=None, help='jpush app key')
 
-    #     parser.print_help()
-
+    #parser.print_help()
     return parser.parse_args(src_args)
 
 
