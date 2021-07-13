@@ -4,6 +4,7 @@ import time
 import argparse
 import threading
 import rpyc
+import creditutils.str_util as str_utils
 import creditutils.trivial_util as trivial_util
 from threading import Event
 from queue import Queue
@@ -143,6 +144,7 @@ class Consumer:
         host, port = self.get_server_host_ip(item)
         conn = None
         result = {}
+        begin = time.time()
         try:
             conn = rpyc.connect(host, port, config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
             service_name = conn.root.get_service_name().lower()
@@ -151,14 +153,16 @@ class Consumer:
             trivial_util.print_t(f'{service_name} on {item} compile completed.')
             self.time_record[item] = None
         except:
-            result = {'code': CODE_FAILED, 'msg': f'errors in app_controller: {sys.exc_info()}'}
-            
+            result = {'code': CODE_FAILED, 'msg': f'errors in app_controller: {sys.exc_info()}'}    
+        end = time.time()
+        cost_time = str_utils.get_time_info(begin, end)
+
         info = self.producer.get_switch_data(index)
         self.producer.task_done()
         target = dict()
         for k in result:
             target[k] = result[k]
-        info[Flag.data] = dict({'host': f'{host}:{port}'}, **target)
+        info[Flag.data] = dict({'host': f'{host}:{port}', 'cost_time': cost_time}, **target)
         info[Flag.event].set()
         with self.lock:
             self.record[item] -= 1

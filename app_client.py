@@ -1,11 +1,10 @@
 import os
 import sys
-import time
+import threading
 import json
 import rpyc
 import argparse
 import xmltodict
-import creditutils.str_util as str_utils
 import creditutils.file_util as file_util
 import creditutils.trivial_util as trivial_util
 import creditutils.dingtalk_util as dingtalk_util
@@ -44,7 +43,7 @@ class Notifier:
 
     def _parse_base_config(self):
         # 解析发送给配置升级人员的配置
-        config_dirs = ['config/base', 'dingtalk_receiver.xml']
+        config_dirs = [f'config{os.sep}base', 'dingtalk_receiver.xml']
         config_path = os.sep.join(config_dirs)
         dingtalk_receiver_path = os.path.join(self.work_path, config_path)
         self.dingtalk_receiver = ConfigParser.parse_config(dingtalk_receiver_path)
@@ -98,59 +97,60 @@ class AppClient:
         nos = json.loads(self.ver_nos)
         names = json.loads(self.ver_names)
         vcodes = json.loads(self.ver_codes)
-
         api_vers = None
         if self.api_vers is not None:
             api_vers = json.loads(self.api_vers)
+
         for ev in envs:
-            self.data['ver_env'] = ev
             for c in codes:
+                dt = dict(self.data)
+                dt['ver_env'] = ev                
                 print(f'正在打{c}的{ev}环境的包...')
-                self.data['app_code'] = c
+                dt['app_code'] = c
                 if c in names.keys():
-                    self.data['ver_name'] = names.get(c)
+                    dt['ver_name'] = names.get(c)
                 if c in vcodes.keys():
-                    self.data['ver_code'] = vcodes.get(c)
+                    dt['ver_code'] = vcodes.get(c)
                 if c in nos.keys():
-                    self.data['ver_no'] = nos.get(c)
+                    dt['ver_no'] = nos.get(c)
                 if api_vers is not None and c in api_vers.keys():
-                    self.data['api_ver'] = api_vers.get(c)
-                self.connect_with_name()
+                    dt['api_ver'] = api_vers.get(c)
+                thread = threading.Thread(target=self.connect_with_name, args=(dt,))
+                thread.start()
 
     # 连接控制中心服务，分派指定打包机来打包
-    def connect_with_name(self):
+    def connect_with_name(self, dt):
         conn = None
-        begin = time.time()
         try:
             conn = rpyc.connect_by_service('central_control', config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
             print(f'connected {conn.root.get_service_name().lower()} then wait for processing...')
-            result = conn.root.process(self.data)
+            result = conn.root.process(dt)
         except:
             result = {'code': CODE_FAILED, 'msg': f'errors in app_client: {sys.exc_info()}'}
         print(result)
-        # 计算打包耗时
-        end = time.time()
-        cost_time = str_utils.get_time_info(begin, end)
-
+        
         # 组合通知信息
+        tpl = '{0}: &nbsp;_{1}_'
         notify_info = [
-            f'# [{self.job_name}]({self.job_url})',
-            f'> 任务: **[{self.job_build_name}]({self.job_build_url})**',
-            f'> 应用: **{self.data["app_code"]}**',
-            f'> 分支: **{self.branch}**',
-            f'> 环境: **{self.data["ver_env"]}**',
-            f'> 版本: **{self.data["ver_name"]}({self.data["ver_code"]})**',
-            f'> 转测: **{self.data["ver_no"]}**',
-            f'> 渠道: **{self.channel}**',
-            f'> 耗时: **{cost_time}**',
+            f'#### [{self.job_name}]({self.job_url})',
+            f'---------------------------------------------------------',
+            tpl.format('任务', f'[{self.job_build_name}]({self.job_build_url})'),
+            tpl.format('应用', dt["app_code"]),
+            tpl.format('分支', self.branch),
+            tpl.format('环境', dt["ver_env"]),
+            tpl.format('版本', f'{dt["ver_name"]}({dt["ver_code"]})'),
+            tpl.format('转测', dt["ver_no"]),
+            tpl.format('渠道', self.channel),
         ]
+        if result['cost_time'] is not None:
+            notify_info.append(tpl.format('耗时', result["cost_time"]))
         if result['code'] == CODE_SUCCESS:
-            notify_info.append(f'> 状态: **成功**',)
+            notify_info.append(tpl.format('状态', '成功'))
         else:
-            notify_info.append(f'> 状态: **失败**',)
-            notify_info.append(f'> 原因: **{result["msg"]}**')
+            notify_info.append(tpl.format('状态', '失败'))
+            notify_info.append(tpl.format('原因', result["msg"]))
         if result['host'] is not None:
-            notify_info.append(f'> 来源: **{result["host"]}**',)
+            notify_info.append(tpl.format('来源', result["host"]))
 
         # 组合通知信息并发送
         notifier = Notifier(self.work_path)
@@ -209,8 +209,7 @@ def get_args(src_args=None):
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--jpush', metavar='jpush_appkey', dest='jpush_appkey', default=None, help='jpush app key')
 
-    #     parser.print_help()
-
+    #parser.print_help()
     return parser.parse_args(src_args)
 
 
