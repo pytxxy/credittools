@@ -761,7 +761,7 @@ class AppService(Service):
             log_info(str(data))
             manager = BuildManager(data, _input_args['work_path'])
             manager.process()
-            # time.sleep(150)
+            # time.sleep(30)
             code = CODE_SUCCESS
             msg = 'success'
         except:

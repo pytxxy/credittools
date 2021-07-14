@@ -167,14 +167,7 @@ class Consumer:
         with self.lock:
             self.record[item] -= 1
 
-    def get_new_server_info(self, info):
-        server_map = dict()
-        for item in info:
-            k = self.get_server_key(item)
-            server_map[k] = 0
-
-        return server_map
-
+    # 更新服务节点信息
     def update_server(self, result):
         server_map = self.get_new_server_info(result)
         with self.lock:
@@ -197,6 +190,24 @@ class Consumer:
             for k in to_del_list:
                 del self.record[k]
                 del self.time_record[k]
+
+    # 检查指定服务的是否可以连接
+    def check_server_avilable(self, addr):
+        try:
+            host, port = self.get_server_host_ip(addr)
+            rpyc.connect(host, port)
+            return True
+        except:
+            return False
+
+    # 获取新的服务信息
+    def get_new_server_info(self, info):
+        server_map = dict()
+        for item in info:
+            k = self.get_server_key(item)
+            if self.check_server_avilable(k):
+                server_map[k] = 0
+        return server_map
 
     def get_server_key(self, item):
         ip = item[0]
