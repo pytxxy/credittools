@@ -43,7 +43,7 @@ class Notifier:
 
     def _parse_base_config(self):
         # 解析发送给配置升级人员的配置
-        config_dirs = [f'config{os.sep}base', 'dingtalk_receiver.xml']
+        config_dirs = ['config', 'base', 'dingtalk_receiver.xml']
         config_path = os.sep.join(config_dirs)
         dingtalk_receiver_path = os.path.join(self.work_path, config_path)
         self.dingtalk_receiver = ConfigParser.parse_config(dingtalk_receiver_path)
@@ -142,14 +142,14 @@ class AppClient:
             tpl.format('转测', dt["ver_no"]),
             tpl.format('渠道', self.channel),
         ]
-        if result['cost_time'] is not None:
+        if 'cost_time' in str(result):
             notify_info.append(tpl.format('耗时', result["cost_time"]))
         if result['code'] == CODE_SUCCESS:
             notify_info.append(tpl.format('状态', '成功'))
         else:
             notify_info.append(tpl.format('状态', '失败'))
             notify_info.append(tpl.format('原因', result["msg"]))
-        if result['host'] is not None:
+        if 'host' in str(result):
             notify_info.append(tpl.format('来源', result["host"]))
 
         # 组合通知信息并发送
