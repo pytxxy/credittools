@@ -101,12 +101,11 @@ class Manager:
             if k != Manager.HEAD_NAME:
                 if k in local_map:
                     try:
+                        repo.git.reset(Manager.HEAD_NAME, hard=True)
                         if k == repo.active_branch.name:
-                            repo.git.reset(Manager.HEAD_NAME, hard=True)
                             repo.git.pull()
                         else:
                             repo.git.checkout(k)
-                            repo.git.reset(Manager.HEAD_NAME, hard=True)
                             repo.git.pull()
                     except git.exc.GitCommandError as e:
                         # 在pull同步出错的条件下，先将当前工作区切换到其他分支，再删除当前分支，然后重新从服务器拉取该分支
