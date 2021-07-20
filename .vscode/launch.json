@@ -22,14 +22,15 @@
             // "args": [
             //     "D:\\repository\\TxxyAndroid"
             // ]
-            "args": [
-                "-g",
-                "--upload",
-                "--official",
-                "--notify",
-                "5.1.8",
-                "D:\\auto_build\\release_apk"
-            ]
+            // "args": [
+            //     "-g",
+            //     "--upload",
+            //     "--official",
+            //     "--notify",
+            //     "5.1.8",
+            //     "D:\\auto_build\\release_apk"
+            // ]
+            "args": []
         },
         {
             "name": "Python: Remote Attach",
