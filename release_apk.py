@@ -6,10 +6,10 @@
 '''
 import argparse
 import os
-import time
 import subprocess
 import xmltodict
 import shutil
+import json
 
 import creditutils.file_util as file_util
 import creditutils.trivial_util as util
@@ -497,6 +497,16 @@ class Manager:
 
         self.work_path = os.path.abspath(self.work_path)
 
+    def prepare(self):
+        codes = self.app_codes.split(',')
+        vnames = json.loads(self.ver_names)
+        for c in codes:
+            self.app_code = c
+            if c in vnames.keys():
+                self.ver_name = vnames.get(c)
+            print(f'正在打{c}({self.ver_name})的渠道包...')
+            self.process()
+
     def process(self):
         # 生成渠道包
         if self.to_generate:
@@ -522,19 +532,23 @@ class Manager:
 
 def main(args):
     manager = Manager(args)
-    manager.process()
+    manager.prepare()
 
 
 # 对输入参数进行解析，设置相应参数
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='to release apk.')
-    # 版本名称，如5.1.2
-    parser.add_argument('ver_name', metavar='ver_name', help='version name')
+
     # 工作目录
     parser.add_argument('work_path', metavar='work_path', help='working directory')
 
-    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy',
-                        choices=['txxy', 'xycx', 'pyqx', 'pyzx'],
+    # 应用和版本信息多选及其配置
+    parser.add_argument('--vernames', metavar='ver_names', dest='ver_names', type=str, help='version names')
+    parser.add_argument('--appcodes', metavar='app_codes', dest='app_codes', type=str, help='app codes such as txxy,xycx,pyqx,pyzx')
+
+    # # 版本名称，如5.1.2
+    parser.add_argument('--ver_name', metavar='ver_name', default='1.0.0', help='version name')
+    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy', 'xycx', 'pyqx', 'pyzx'],
                         help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin; pyzx: peng yuan zheng xin;')
     # 是否进行生成渠道包的操作
     parser.add_argument('-g', dest='to_generate', action='store_true', default=False, help='indicate to generate channel apk')
