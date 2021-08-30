@@ -109,7 +109,7 @@ class BuildCmd:
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PFOR_PUBLISH={for_publish}  ' \
-                      '-PHTTP_DNS_OPEN={httpdns}  -PWEB_URL={entrance}'
+                      '-PHTTP_DNS_OPEN={httpdns} -PWEB_URL={entrance}'
 
     def __init__(self):
         # 先初始化默认值
@@ -120,6 +120,7 @@ class BuildCmd:
         self.ver_code = 0
         self.ver_no = '00'
         self.api_ver = None
+        self.entrance = None
         self.for_publish = str(True).lower()
         self.coverage_enabled = str(True).lower()
         self.httpdns = str(False).lower()
@@ -145,6 +146,7 @@ class BuildCmd:
         self.ver_code = info[BuilderLabel.VER_CODE_FLAG]
         self.ver_no = '{:02d}'.format(info[BuilderLabel.VER_NO_FLAG])
         self.api_ver = info[BuilderLabel.API_VER_FLAG]
+        self.entrance = info[BuilderLabel.ENTRANCE_FLAG]
 
         env_mode = info[BuilderLabel.ENV_MODE_FLAG]
         self.httpdns = info[BuilderLabel.ENV_FLAG][BuilderLabel.HTTPDNS_FLAG][env_mode].lower()
