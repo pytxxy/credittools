@@ -88,6 +88,7 @@ class BuilderLabel:
     DEMO_LABEL_FLAG = 'demo_label'
     API_VER_FLAG = 'api_ver'
     APP_CODE_FLAG = 'app_code'
+    ENTRANCE_FLAG = 'entrance'
 
     LABEL_FLAG = 'label'
     BETA_LABEL_FLAG = 'beta_label'
@@ -100,15 +101,15 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'for_publish',
-               'coverage_enabled', 'httpdns', 'demo_label']
+               'coverage_enabled', 'httpdns', 'demo_label', 'entrance']
 
     cmd_format = exec_name + ' --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PFOR_PUBLISH={for_publish} ' \
-                      '-PHTTP_DNS_OPEN={httpdns}'
+                      '-PHTTP_DNS_OPEN={httpdns} -PWEB_URL={entrance}'
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
                       '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PFOR_PUBLISH={for_publish}  ' \
-                      '-PHTTP_DNS_OPEN={httpdns}'
+                      '-PHTTP_DNS_OPEN={httpdns}  -PWEB_URL={entrance}'
 
     def __init__(self):
         # 先初始化默认值
@@ -487,6 +488,7 @@ class BuildManager:
         params[BuilderLabel.VER_NO_FLAG] = self.ver_no
         params[BuilderLabel.API_VER_FLAG] = self.api_ver
         params[BuilderLabel.IS_TEST_FLAG] = self.is_test
+        params[BuilderLabel.ENTRANCE_FLAG] = self.entrance
 
         params[BuilderLabel.ENV_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG]
 
@@ -684,6 +686,7 @@ def get_args(src_args=None):
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
                         help='indicate to upload build files')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
+    parser.add_argument('--entrance', metavar='entrance', dest='entrance', default='https://www.gongzhongjiandu.org/', help='web entrance')
 
     #     parser.print_help()
 
