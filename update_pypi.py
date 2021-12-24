@@ -9,27 +9,41 @@ Created on 2019年4月15日
 """
 更新PyPI的大体步骤如下：
 前期准备工作：
-1.安装twine，具体如下：
-  linux: python3 -m pip install --user --upgrade twine
-  windows: py -3 -m pip install --upgrade twine
-2.版本名称规范：
+1.确保已经安装了最新版本的 build 模块：
+  linux: python3 -m pip install --upgrade build
+  windows: py -m pip install --upgrade build
+2.确保已经安装了最新版本的 twine 模块：
+  linux: python3 -m pip install --upgrade twine
+  windows: py -m pip install --upgrade twine
+3.版本名称规范：
   PEP 440 -- Version Identification and Dependency Specification(https://www.python.org/dev/peps/pep-0440/)
   [N!]N(.N)*[{a|b|rc}N][.postN][.devN]
   ^((?:\d+!)?\d+(?:\.\d+)*)(?:(?:(?:a)|(?:b)|(?:r?c))\d+)?(?:\.post\d+)?(?:\.dev\d+)?$
-
-具体操作：
-1.更新当前git库(可选，依赖于是本地直接上传，还是从远程更新上传)；
-2.更新版本编号；
-3.使用“python setup.py sdist bdist_wheel”命令行执行打包操作；
-4.可以使用“twine upload --repository-url https://test.pypi.org/legacy/ dist/bc_dock_util-0.0.9*”先上传到测试环境进行验证(也可以使用“twine upload --repository-url https://test.pypi.org/legacy/ dist/*”对所有打包文件执行上传操作)；
-5.上传正式环境使用命令为“twine upload --repository-url https://upload.pypi.org/legacy/ dist/bc_dock_util-0.0.9*”（可以简化为“twine upload dist/bc_dock_util-0.0.9*”）；
-6.上传成功，也需要同步更新github相应配置里的版本号，该方式可选；
+4.使用api token上传
+To use this API token:
+Set your username to __token__
+Set your password to the token value, including the pypi- prefix
+For example, if you are using Twine to upload your projects to PyPI, set up your $HOME/.pypirc file like this:
+[testpypi]
+  username = __token__
+  password = your_test_token_content
+[pypi]
+  username = __token__
+  password = your_formal_token_content
 
 官方新建模块帮助文档链接如下：
 https://packaging.python.org/tutorials/packaging-projects/
 
+具体操作：
+1.更新当前git库(可选，依赖于是本地直接上传，还是从远程更新上传)；
+2.更新版本编号；
+3.使用“python -m build”命令行执行打包操作；
+4.可以使用“python -m twine upload --repository testpypi dist/bc_dock_util-0.0.9*”先上传到测试环境进行验证(也可以使用“python -m twine upload --repository testpypi dist/*”对所有打包文件执行上传操作)；
+5.上传正式环境使用命令为“python -m twine upload dist/bc_dock_util-0.0.9*”；
+6.上传成功，也需要同步更新github相应配置里的版本号，该方式可选；
+
 特别说明：
-1.当前该脚本可在windows7环境下面可用，且需确保默认python可执行程序是python3版本；
+1.当前该脚本可在windows10环境下面可用，且需确保默认python可执行程序是python3版本；
 
 使用样例:
 update_pypi.bat -u --vername 0.0.9b1.dev1 -b -t --upload -c --branch master D:\work\bc_dock_util
@@ -56,6 +70,7 @@ import creditutils.trivial_util as utility
 import creditutils.file_util as file_util
 import creditutils.git_util as git_util
 import creditutils.exec_cmd as exec_cmd
+import creditutils.base_util as base_util
 
 class Manager:
     VER_PTN_STR = '^((?:\d+!)?\d+(?:\.\d+)*)(?:(?:(?:a)|(?:b)|(?:r?c))\d+)?(?:\.post\d+)?(?:\.dev\d+)?$'
@@ -71,11 +86,12 @@ class Manager:
         self.target_url_formal = 'https://upload.pypi.org/legacy/'
         self.target_url_test = 'https://test.pypi.org/legacy/'
 
-        setup_name = 'setup.py'
+        setup_name = 'setup.cfg'
         self.setup_path = os.path.join(self.git_root, setup_name)
 
         self.init_path = None
         self.main_ver = None
+        self.python_name = Manager.get_python_name()
         
     def process(self):
         if self.to_update:
@@ -112,6 +128,15 @@ class Manager:
             self.commit_to_repo()
 
     @staticmethod
+    def get_python_name():
+        if base_util.is_windows_system():
+            return 'py'
+        elif base_util.is_linux_system():
+            return 'python3'
+        else:
+            return 'python'
+
+    @staticmethod
     def get_main_version(version):
         re_ptn = Manager.VER_PTN_STR
         result = re.match(re_ptn, version)
@@ -137,13 +162,9 @@ class Manager:
 
         return self.update_setup_version(self.setup_path, version)
         
-        # init_name = '__init__.py'
-        # self.init_path = os.path.join(self.git_root, self.module_name, init_name)
-        # return self.update_init_version(self.init_path, version)
-
     def _get_module_name(self, data):
         # example: name='creditutils'
-        re_ptn = 'name\s*=\s*[\'\"](\w+)[\'\"]'
+        re_ptn = 'name\s*=\s*([\w\-]+)'
         result = re.search(re_ptn, data)
         if result:
             return result.group(1)
@@ -152,7 +173,7 @@ class Manager:
 
     def _get_version_name(self, data):
         # example: version='0.0.11'
-        re_ptn = 'version\s*=\s*[\'\"]([^\'\"]*)[\'\"]'
+        re_ptn = 'version\s*=\s*([^\s]*)'
         result = re.search(re_ptn, data)
         if result:
             return result.group(1)
@@ -161,27 +182,15 @@ class Manager:
 
     def update_setup_version(self, file_path, version):
         # example: version='0.0.2'
-        re_ptn = '(version\s*=\s*[\'\"])([^\'\"]*)([\'\"])'
+        re_ptn = '(version\s*=\s*)([^\s]*)'
         src_data = file_util.read_file_content(file_path)
-        new_data = re.sub(re_ptn, '\g<1>{}\g<3>'.format(version), src_data)
+        new_data = re.sub(re_ptn, '\g<1>{}'.format(version), src_data)
         if new_data != src_data:
             file_util.write_to_file(file_path, new_data, 'utf-8')
             return True
         else:
             return False
 
-    def update_init_version(self, file_path, version):
-        # example: version_info = (0, 0, 9)
-        re_ptn = '(version_info\s*=\s*\()(\d+(?:,\s*\d+){2})(\))'
-        src_data = file_util.read_file_content(file_path)
-        target_version = ', '.join(re.split('\.\s*', version))
-        new_data = re.sub(re_ptn, f'\g<1>{target_version}\g<3>', src_data)
-        if new_data != src_data:
-            file_util.write_to_file(file_path, new_data, 'utf-8')
-            return True
-        else:
-            return False
-    
     @staticmethod
     def list_file(curr_dir, name_ptn):
         for i in glob.glob(os.path.join(curr_dir, name_ptn)):
@@ -195,19 +204,18 @@ class Manager:
             os.remove(item)
 
     def build_wheel(self):
-        cmd_str = 'python setup.py sdist bdist_wheel'
+        cmd_str = f'{self.python_name} -m build'
         result = exec_cmd.run_cmd_for_code_in_specified_dir(self.git_root, cmd_str)
         if result != 0:
             raise Exception('build wheel failed!')
 
     def upload_to_pypi(self):
+        target_tag = ''
         if self.is_test:
-            target_url = self.target_url_test
-        else:
-            target_url = self.target_url_formal
+            target_tag = '--repository testpypi'
 
         time_to_wait = 120
-        cmd_str = f'twine upload --repository-url {target_url} dist/{self.module_name}-{self.ver_name}*'
+        cmd_str = f'{self.python_name} -m twine upload {target_tag} dist/{self.module_name}-{self.ver_name}*'
         result = subprocess.run(cmd_str, shell=True, cwd=self.git_root, timeout=time_to_wait)
         if result.returncode != 0:
             raise Exception('upload to pypi failed!')
@@ -238,54 +246,6 @@ class Manager:
             result = mid_path
 
         return result
-
-
-def test_upload_to_pypi():
-    target_url = 'https://test.pypi.org/legacy/'
-    module_name = 'bc_dock_util'
-    ver_name = '0.0.10'
-    git_root = 'D:\\work\\bc_dock_util'
-    cmd_str = f'twine upload --repository-url {target_url} dist/{module_name}-{ver_name}*'
-    # result = exec_cmd.run_cmd_for_code_in_specified_dir(git_root, cmd_str)
-    # if result != 0:
-        # raise Exception('upload to pypi failed!')
-
-    # proc = subprocess.Popen(cmd_str, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True, universal_newlines=True, cwd=git_root)
-    proc = subprocess.Popen(cmd_str.split(), stdin=subprocess.PIPE, cwd=git_root)
-    try:
-        time.sleep(3)
-        # print(proc.stdout.readline())
-        proc.stdin.write(b'caifh\n')
-        # proc.stdin.write(b'dir\n')
-        proc.stdin.flush()
-        # print(proc.poll())
-        time.sleep(3)
-        # print(proc.stdout.readline())
-        proc.stdin.write(b'Temp19811205\n')
-        # proc.stdin.write(b'cd ..\n')
-        proc.stdin.flush()
-        # print(proc.stdout.readline())
-        proc.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        proc.kill()
-        outs, errs = proc.communicate()
-        print(f'outs: {outs}, errs: {errs}.')
-
-
-def test_upload_to_pypi_with_pexpect():
-    # 本来想实现自动输入用户名和密码的功能，实际验证发现不可行，当前先使用手动输入用户名和密码方案
-    # import pexpect
-    # target_url = 'https://test.pypi.org/legacy/'
-    # module_name = 'bc_dock_util'
-    # ver_name = '0.0.10'
-    # cmd_str = f'twine upload --repository-url {target_url} dist/{module_name}-{ver_name}*'
-
-    # child = pexpect.spawn(cmd_str)
-    # child.expect('Enter your username:')
-    # child.sendline('caifh')
-    # child.expect('Enter your password:')
-    # child.sendline('Temp19811205')
-    pass
 
 
 # 对输入参数进行解析，设置相应参数
