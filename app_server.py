@@ -242,7 +242,7 @@ class BuildCmd:
         self.app_name = info[BuilderLabel.APP_NAME_FLAG]
         self.channel = info[BuilderLabel.CHANNEL_FLAG]
         self.jpush_appkey = info[BuilderLabel.JPUSH_APPKEY_FLAG]
-        self.minify_enabled = info[BuilderLabel.MINIFY_ENABLED_FLAG]
+        self.minify_enabled = str(info[BuilderLabel.MINIFY_ENABLED_FLAG]).lower()
 
     def get_basic_map(self):
         rtn_map = {}
@@ -701,7 +701,7 @@ class BuildManager:
 
     # 打包mapping文件，前提是启用了混淆
     def _zip_mapping_files(self, main_prj_path):
-        if self.minify_enabled == str(False).lower(): return
+        if not self.minify_enabled: return
         build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
         app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
         ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
