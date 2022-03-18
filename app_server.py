@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import re
 import platform
@@ -12,6 +11,7 @@ import xmltodict
 import logging
 import datetime
 import threading
+import traceback
 
 import creditutils.apk_builder_util as apk_builder
 import creditutils.file_util as file_util
@@ -19,6 +19,8 @@ import creditutils.str_util as str_utils
 import creditutils.trivial_util as trivial_util
 import creditutils.git_util as git
 import creditutils.apk_util as apk_util
+import creditutils.zip_util as zip_util
+import creditutils.file_util as file_util
 import protect_android_app as protect_app
 
 from typing import Dict
@@ -174,6 +176,7 @@ class BuilderLabel:
 
     CODE_VER_FLAG = 'code_ver'
     JPUSH_APPKEY_FLAG = 'jpush_appkey'
+    MINIFY_ENABLED_FLAG = 'minify_enabled'
 
 
 class BuildCmd:
@@ -181,14 +184,14 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
-                     'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
+                     'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel', 'minify_enabled']
 
     extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
     cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
         '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
         '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
-        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
+        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled}'
 
     def __init__(self):
         # 先初始化默认值
@@ -206,6 +209,7 @@ class BuildCmd:
         self.channel = BuilderLabel.DEFAULT_CHAN
         self.demo_label = 'normal'
         self.jpush_appkey = None
+        self.minify_enabled = str(False).lower()
 
     def update_value(self, info):
         # 根据给过来的配置值，更新相应值
@@ -238,6 +242,7 @@ class BuildCmd:
         self.app_name = info[BuilderLabel.APP_NAME_FLAG]
         self.channel = info[BuilderLabel.CHANNEL_FLAG]
         self.jpush_appkey = info[BuilderLabel.JPUSH_APPKEY_FLAG]
+        self.minify_enabled = info[BuilderLabel.MINIFY_ENABLED_FLAG]
 
     def get_basic_map(self):
         rtn_map = {}
@@ -525,6 +530,7 @@ class BuildManager:
         params[BuilderLabel.ARM64_FLAG] = self.is_arm64
         params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
         params[BuilderLabel.JPUSH_APPKEY_FLAG] = self.jpush_appkey
+        params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled
 
         # 获取网络api version配置信息
         if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:
@@ -648,6 +654,8 @@ class BuildManager:
                 self._write_build_info()
                 # 生成apk描述信息
                 desc_data = self._generate_desc()
+                # 打包mapping文件
+                self._zip_mapping_files(main_prj_path)
 
                 target_name = os.path.basename(self.apk_output_path)
                 to_upload_path = os.path.dirname(self.apk_output_path)
@@ -690,6 +698,19 @@ class BuildManager:
         readme_file_name = 'readme-{}-{}.txt'.format(self.whole_ver_name, self.ver_code)
         build_info_path = os.path.join(self.output_directory, readme_file_name)
         file_util.write_to_file(build_info_path, build_info, encoding='utf-8')
+
+    # 打包mapping文件，前提是启用了混淆
+    def _zip_mapping_files(self, main_prj_path):
+        if self.minify_enabled == str(False).lower(): return
+        build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
+        app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
+        ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
+        net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].title()
+        mapping_out_path = main_prj_path + f'/build/outputs/mapping/{app_code}{net_env}{build_type}/'
+        mapping_file_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
+        mapping_info_path = os.path.join(self.output_directory, mapping_file_name)
+        file_items = file_util.get_child_files(mapping_out_path)
+        zip_util.zip_files(file_items, mapping_info_path, mapping_out_path, True)
 
     def _protect_file(self, main_prj_path):
         ip = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.IP_FLAG]
@@ -766,7 +787,7 @@ class AppService(Service):
             msg = 'success'
         except:
             code = CODE_FAILED
-            msg = f'errors in app_server: {sys.exc_info()}'
+            msg = f'errors in app_server: {traceback.format_exc()}'
 
         return {'code': code, 'msg': msg}
 

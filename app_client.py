@@ -1,10 +1,10 @@
 import os
-import sys
 import threading
 import json
 import rpyc
 import argparse
 import xmltodict
+import traceback
 import creditutils.file_util as file_util
 import creditutils.trivial_util as trivial_util
 import creditutils.dingtalk_util as dingtalk_util
@@ -126,7 +126,8 @@ class AppClient:
             print(f'connected {conn.root.get_service_name().lower()} then wait for processing...')
             result = conn.root.process(dt)
         except:
-            result = {'code': CODE_FAILED, 'msg': f'errors in app_client: {sys.exc_info()}'}
+            result = {'code': CODE_FAILED, 'msg': f'errors in app_client: {traceback.format_exc()}'}
+
         print(result)
         
         # 组合通知信息
@@ -208,6 +209,7 @@ def get_args(src_args=None):
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--jpush', metavar='jpush_appkey', dest='jpush_appkey', default=None, help='jpush app key')
+    parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
 
     #parser.print_help()
     return parser.parse_args(src_args)

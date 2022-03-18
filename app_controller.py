@@ -1,8 +1,8 @@
-import sys
 import math
 import time
 import argparse
 import threading
+import traceback
 import rpyc
 import creditutils.str_util as str_utils
 import creditutils.trivial_util as trivial_util
@@ -153,7 +153,7 @@ class Consumer:
             trivial_util.print_t(f'{service_name} on {item} compile completed.')
             self.time_record[item] = None
         except:
-            result = {'code': CODE_FAILED, 'msg': f'errors in app_controller: {sys.exc_info()}'}    
+            result = {'code': CODE_FAILED, 'msg': f'errors in app_controller: {traceback.format_exc()}'}    
         end = time.time()
         cost_time = str_utils.get_time_info(begin, end)
 
