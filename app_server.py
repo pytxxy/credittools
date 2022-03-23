@@ -20,7 +20,6 @@ import creditutils.trivial_util as trivial_util
 import creditutils.git_util as git
 import creditutils.apk_util as apk_util
 import creditutils.zip_util as zip_util
-import creditutils.file_util as file_util
 import protect_android_app as protect_app
 
 from typing import Dict
@@ -28,6 +27,7 @@ from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
 from app_controller import DEFAULT_LISTEN_TIMEOUT, CODE_SUCCESS, CODE_FAILED
+from bugly_upload_symbol import BuglyManager
 
 
 '''
@@ -707,10 +707,14 @@ class BuildManager:
         ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
         net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].title()
         mapping_out_path = main_prj_path + f'/build/outputs/mapping/{app_code}{net_env}{build_type}/'
-        mapping_file_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
-        mapping_info_path = os.path.join(self.output_directory, mapping_file_name)
+        mapping_file_name = os.path.join(mapping_out_path, 'mapping.txt')
+        mapping_zip_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
+        mapping_info_path = os.path.join(self.output_directory, mapping_zip_name)
         file_items = file_util.get_child_files(mapping_out_path)
+        log_info('zip mapping files into {}.'.format(mapping_info_path))
         zip_util.zip_files(file_items, mapping_info_path, mapping_out_path, True)
+        log_info('upload bugly symbol ... ver_env:{}, app_code:{}, app_version:{}, mapping_file:{}'.format(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name))
+        BuglyManager(self.work_path).uploadSymbol(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name)
 
     def _protect_file(self, main_prj_path):
         ip = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.IP_FLAG]
@@ -810,10 +814,10 @@ def main(args):
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='config log dir and work path')
     parser.add_argument('-ld', dest='log_dir', help='dir which logs stores in', default='/data/log/app_server')
-    parser.add_argument('-wp', dest='work_path', help='work path which package app', default='/data/android/auto_build/app')
+    parser.add_argument('-wp', dest='work_path', help='work path which package app', default='D:/tools/package_app/public/build_script/android/app')
     parser.add_argument('-sh', dest='server_host', help='local server host name', default=None)
     parser.add_argument('-sp', dest='server_port', help='local server port', default=9998)
-    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='255.255.255.255')
+    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='192.168.20.214')
     parser.add_argument('-rp', dest='registry_port', help='port which rpyc_registry.py is running', default=REGISTRY_PORT)
     return parser.parse_args(src_args)
 
