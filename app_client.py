@@ -129,37 +129,39 @@ class AppClient:
             result = {'code': CODE_FAILED, 'msg': f'errors in app_client: {traceback.format_exc()}'}
 
         print(result)
-        
-        # 组合通知信息
-        tpl = '{0}: &nbsp;_{1}_'
-        notify_info = [
-            f'#### [{self.job_name}]({self.job_url})',
-            f'---------------------------------------------------------',
-            tpl.format('任务', f'[{self.job_build_name}]({self.job_build_url})'),
-            tpl.format('应用', dt["app_code"]),
-            tpl.format('分支', self.branch),
-            tpl.format('环境', dt["ver_env"]),
-            tpl.format('版本', f'{dt["ver_name"]}({dt["ver_code"]})'),
-            tpl.format('转测', dt["ver_no"]),
-            tpl.format('渠道', self.channel),
-            tpl.format('混淆', ('是' if self.minify_enabled else '否')),
-        ]
-        if 'cost_time' in str(result):
-            notify_info.append(tpl.format('耗时', result["cost_time"]))
-        if result['code'] == CODE_SUCCESS:
-            notify_info.append(tpl.format('状态', '成功'))
-        else:
-            notify_info.append(tpl.format('状态', '失败'))
-            notify_info.append(tpl.format('原因', result["msg"]))
-        if 'host' in str(result):
-            notify_info.append(tpl.format('来源', result["host"]))
 
-        # 组合通知信息并发送
-        notifier = Notifier(self.work_path)
-        notifier.notify_to_dingtalk({
-            'title': f'{self.job_name}',
-            'text': '\n\n'.join(notify_info)
-        })
+        # 启用了发送钉钉通知的开关，则需要通过钉钉机器人发送消息通知
+        if self.need_notify:
+            # 组合通知信息
+            tpl = '{0}: &nbsp;_{1}_'
+            notify_info = [
+                f'#### [{self.job_name}]({self.job_url})',
+                f'---------------------------------------------------------',
+                tpl.format('任务', f'[{self.job_build_name}]({self.job_build_url})'),
+                tpl.format('应用', dt["app_code"]),
+                tpl.format('分支', self.branch),
+                tpl.format('环境', dt["ver_env"]),
+                tpl.format('版本', f'{dt["ver_name"]}({dt["ver_code"]})'),
+                tpl.format('转测', dt["ver_no"]),
+                tpl.format('渠道', self.channel),
+                tpl.format('混淆', ('是' if self.minify_enabled else '否')),
+            ]
+            if 'cost_time' in str(result):
+                notify_info.append(tpl.format('耗时', result["cost_time"]))
+            if result['code'] == CODE_SUCCESS:
+                notify_info.append(tpl.format('状态', '成功'))
+            else:
+                notify_info.append(tpl.format('状态', '失败'))
+                notify_info.append(tpl.format('原因', result["msg"]))
+            if 'host' in str(result):
+                notify_info.append(tpl.format('来源', result["host"]))
+
+            # 组合通知信息并发送
+            notifier = Notifier(self.work_path)
+            notifier.notify_to_dingtalk({
+                'title': f'{self.job_name}',
+                'text': '\n\n'.join(notify_info)
+            })
 
 
 def main(args):
@@ -211,6 +213,7 @@ def get_args(src_args=None):
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--jpush', metavar='jpush_appkey', dest='jpush_appkey', default=None, help='jpush app key')
     parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
+    parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
 
     #parser.print_help()
     return parser.parse_args(src_args)
