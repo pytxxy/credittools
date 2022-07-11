@@ -140,7 +140,8 @@ class BuilderLabel:
     TYPE_FLAG = 'type'
     FILE_ITEM_FLAG = 'file_item'
     GRADLE_FLAG = 'gradle'
-    ARM64_FLAG = 'arm64'
+    ARM32_FLAG = 'arm32'
+    SPLASH_TYPE_FLAG = 'splash_type'
     FOR_GOOGLE_FLAG = 'for_google'
 
     PROTECT_FLAG = 'protect'
@@ -184,12 +185,12 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
-                     'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel', 'minify_enabled']
+                     'coverage_enabled', 'httpdns', 'demo_label', 'is_include_arm32', 'splash_type', 'for_google', 'app_name', 'channel', 'minify_enabled']
 
     extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
     cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-        '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
+        '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PPACKAGE_INCLUDE_ARM32={is_include_arm32} -PSPLASH_TYPE={splash_type} ' \
         '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
         '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled}'
 
@@ -237,7 +238,8 @@ class BuildCmd:
         self.coverage_enabled = info[BuilderLabel.COVERAGE_FLAG][BuilderLabel.COMPILE_FLAG][env_mode].lower()
         self.httpdns = info[BuilderLabel.ENV_FLAG][BuilderLabel.HTTPDNS_FLAG][env_mode].lower()
         self.demo_label = info[BuilderLabel.DEMO_LABEL_FLAG]
-        self.is_arm64 = str(info[BuilderLabel.ARM64_FLAG]).lower()
+        self.is_include_arm32 = str(info[BuilderLabel.ARM32_FLAG]).lower()
+        self.splash_type = info[BuilderLabel.SPLASH_TYPE_FLAG]
         self.for_google = str(info[BuilderLabel.FOR_GOOGLE_FLAG]).lower()
         self.app_name = info[BuilderLabel.APP_NAME_FLAG]
         self.channel = info[BuilderLabel.CHANNEL_FLAG]
@@ -527,7 +529,8 @@ class BuildManager:
         params[BuilderLabel.NET_ENV_FLAG] = self.ver_env
         params[BuilderLabel.ENV_MODE_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
-        params[BuilderLabel.ARM64_FLAG] = self.is_arm64
+        params[BuilderLabel.ARM32_FLAG] = self.is_include_arm32
+        params[BuilderLabel.SPLASH_TYPE_FLAG] = self.splash_type
         params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
         params[BuilderLabel.JPUSH_APPKEY_FLAG] = self.jpush_appkey
         params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled

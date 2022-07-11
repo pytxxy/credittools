@@ -205,7 +205,8 @@ def get_args(src_args=None):
     parser.add_argument('--test', dest='is_test', action='store_true', default=False, help='indicate just to test config')
     parser.add_argument('--align', dest='to_align', action='store_true', default=True, help='indicate to align apk file after protected')
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
-    parser.add_argument('--arm64', dest='is_arm64', action='store_true', default=False, help='indicate to build with arm64')
+    parser.add_argument('--include_arm32', dest='is_include_arm32', action='store_true', default=False, help='indicate to build with arm32')
+    parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
     parser.add_argument('--google', dest='for_google', action='store_true', default=False, help='indicate to build for google play')
     parser.add_argument('--channel', metavar='channel', dest='channel', type=str, default=BuilderLabel.DEFAULT_CHAN, help='application channel')
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan', 'mall'], 
