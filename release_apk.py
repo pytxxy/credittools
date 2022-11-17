@@ -518,6 +518,7 @@ class Notifier:
         self.sender.send_mail(subject, content, receivers, ccs=ccs, subtype='html')
 
         # 发送钉钉群通知
+        addr = '\r\n'.join(addr_list)
         info = self._get_dingtalk_message(message_template, addr)
         self.send_dingtalk_message(self.publish_receiver[ConfigLabel.DINGTALK_FLAG], info)
 
