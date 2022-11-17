@@ -486,7 +486,7 @@ class Notifier:
         $addr<br/>
         $prd_desc<br/>
         '''
-        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云, 请配置$app_name的升级。apk包下载链接如下：$addr'''
+        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云, 请配置$app_name的升级。apk包下载链接如下：\r\n$addr'''
 
         # 发送邮件通知
         subject = self._get_mail_subject(subject_template)
@@ -508,7 +508,7 @@ class Notifier:
         $addr<br/>
         $prd_desc<br/>
         '''
-        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云，请在各应用市场上架$app_name的新版本。apk渠道压缩包下载链接如下：$addr'''
+        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云，请在各应用市场上架$app_name的新版本。apk渠道压缩包下载链接如下：\r\n$addr'''
 
         # 发送邮件通知
         addr = '<br/>'.join(addr_list)
