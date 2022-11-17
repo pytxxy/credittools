@@ -5,7 +5,10 @@
 4.检查当前磁盘上存在的历史渠道版本，只保留最近三次的。
 '''
 import argparse
+import base64
+import datetime
 import os
+import string
 import subprocess
 import xmltodict
 import shutil
@@ -397,6 +400,30 @@ class Notifier:
         self._parse_base_config()
         self._init_sender()
 
+    def _fill_template_data(self, template, values):
+        tpl = string.Template(template)
+        return tpl.substitute(values)
+
+    def _get_mail_subject(self, template):
+        time_now = str(datetime.datetime.now())
+        time_now = time_now[:time_now.rindex('.')]
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        values = {'app_name':app_name, 'ver_name':self.ver_name, 'time_now':time_now}
+        return self._fill_template_data(template, values)
+
+    def _get_mail_content(self, template, addr, prd_desc):
+        # 产品需求开发描述
+        if prd_desc:
+            prd_desc = str(base64.b64decode(prd_desc), encoding='utf-8')
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        values = {'app_name':app_name, 'ver_name':self.ver_name, 'addr':addr, 'prd_desc':prd_desc}
+        return self._fill_template_data(template, values)
+
+    def _get_dingtalk_message(self, template, addr):
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        values = {'app_name':app_name, 'ver_name':self.ver_name, 'addr':addr}
+        return self._fill_template_data(template, values)
+
     def parse_receiver(self, config_data):
         if not config_data:
             raise Exception('config_data is empty!')
@@ -449,41 +476,49 @@ class Notifier:
         rtn = dingtalk_util.send_map_data(webhook, secret, data)
         print(rtn.text)
 
-
     # 通知测试人员配置升级
-    def notify_to_upgrade(self, addr):
-        # 发送邮件通知
-        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
-        subject = f'{app_name} {self.ver_name}可以配置升级了'
-        content = f'''您好：
-          {app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请配置{app_name}的升级，apk包下载链接如下：
-        {addr}
-
+    def notify_to_upgrade(self, addr, prd_desc):
+        # 消息模板定义
+        subject_template = '''$app_name $ver_name可以配置升级了($time_now)'''
+        content_template = '''
+        您好，<br/>
+        <b>$app_name $ver_name </b>相关的渠道包已经上传到阿里云，请配置<b>$app_name</b>的升级。apk包下载链接如下：<br/>
+        $addr<br/>
+        $prd_desc<br/>
         '''
+        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云, 请配置$app_name的升级。apk包下载链接如下：$addr'''
+
+        # 发送邮件通知
+        subject = self._get_mail_subject(subject_template)
+        content = self._get_mail_content(content_template, addr, prd_desc)
         receivers, ccs = self.parse_receiver(self.upgrade_receiver[ConfigLabel.MAIL_FLAG])
-        self.sender.send_mail(subject, content, receivers, ccs=ccs)
+        self.sender.send_mail(subject, content, receivers, ccs=ccs, subtype='html')
 
         # 发送钉钉群通知
-        info = f'{app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请配置{app_name}的升级，apk包下载链接如下：{addr}'
+        info = self._get_dingtalk_message(message_template, addr)
         self.send_dingtalk_message(self.upgrade_receiver[ConfigLabel.DINGTALK_FLAG], info)
     
     # 通知运营人员在各大应用市场发布渠道包
-    def notify_to_publish(self, addr_list):
-        # 发送邮件通知
-        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
-        # target_list = map(lambda x: ' '*4 + x, addr_list)
-        target_str = '\r\n'.join(addr_list)
-        subject = f'{app_name} {self.ver_name}可以上传到应用市场了'
-        content = f'''您好：
-          {app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请在各应用市场上架{app_name}的新版本，apk渠道压缩包下载链接如下：
-        {target_str}
-
+    def notify_to_publish(self, addr_list, prd_desc):
+        # 消息模板定义
+        subject_template = '''$app_name $ver_name可以上传到应用市场了($time_now)'''
+        content_template = '''
+        您好，<br/>
+        <b>$app_name $ver_name </b>相关的渠道包已经上传到阿里云，请在各应用市场上架<b>$app_name</b>的新版本。apk渠道压缩包下载链接如下：<br/>
+        $addr<br/>
+        $prd_desc<br/>
         '''
+        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云，请在各应用市场上架$app_name的新版本。apk渠道压缩包下载链接如下：$addr'''
+
+        # 发送邮件通知
+        addr = '<br/>'.join(addr_list)
+        subject = self._get_mail_subject(subject_template)
+        content = self._get_mail_content(content_template, addr, prd_desc)
         receivers, ccs = self.parse_receiver(self.publish_receiver[ConfigLabel.MAIL_FLAG])
-        self.sender.send_mail(subject, content, receivers, ccs=ccs)
+        self.sender.send_mail(subject, content, receivers, ccs=ccs, subtype='html')
 
         # 发送钉钉群通知
-        info = f'{app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请在各应用市场上架{app_name}的新版本，apk渠道压缩包下载链接如下：{target_str}'
+        info = self._get_dingtalk_message(message_template, addr)
         self.send_dingtalk_message(self.publish_receiver[ConfigLabel.DINGTALK_FLAG], info)
 
 
@@ -522,12 +557,12 @@ class Manager:
         notifier = Notifier(self.work_path, self.app_code, self.ver_name)
         if self.to_update_official:
             addr = uploader.get_official_addr()
-            notifier.notify_to_upgrade(addr)
+            notifier.notify_to_upgrade(addr, self.prd_desc)
 
         # 发邮件通知相关人员上架到各应用市场
         if self.to_notify:
             addr_list = uploader.get_zip_uploaded_list()
-            notifier.notify_to_publish(addr_list)
+            notifier.notify_to_publish(addr_list, self.prd_desc)
 
 
 def main(args):
@@ -550,6 +585,10 @@ def get_args(src_args=None):
     parser.add_argument('--ver_name', metavar='ver_name', default='1.0.0', help='version name')
     parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy', 'xycx', 'pyqx', 'pyzx'],
                         help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin; pyzx: peng yuan zheng xin;')
+
+    # 产品需求开发功能点描述
+    parser.add_argument('--prd_desc', metavar='prd_desc', dest='prd_desc', type=str, help='product requirements development description')
+
     # 是否进行生成渠道包的操作
     parser.add_argument('-g', dest='to_generate', action='store_true', default=False, help='indicate to generate channel apk')
 
