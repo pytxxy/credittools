@@ -215,6 +215,7 @@ def get_args(src_args=None):
     parser.add_argument('--jpush', metavar='jpush_appkey', dest='jpush_appkey', default=None, help='jpush app key')
     parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
     parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
+    parser.add_argument('--upload_bugly', dest='upload_bugly', action='store_true', default=True, help='upload bugly symbol files, mapping.txt etc.')
 
     #parser.print_help()
     return parser.parse_args(src_args)

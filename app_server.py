@@ -178,6 +178,7 @@ class BuilderLabel:
     CODE_VER_FLAG = 'code_ver'
     JPUSH_APPKEY_FLAG = 'jpush_appkey'
     MINIFY_ENABLED_FLAG = 'minify_enabled'
+    UPLOAD_BUGLY_FLAG = 'upload_bugly'
 
 
 class BuildCmd:
@@ -211,6 +212,7 @@ class BuildCmd:
         self.demo_label = 'normal'
         self.jpush_appkey = None
         self.minify_enabled = str(False).lower()
+        self.upload_bugly = str(False).lower()
 
     def update_value(self, info):
         # 根据给过来的配置值，更新相应值
@@ -245,6 +247,7 @@ class BuildCmd:
         self.channel = info[BuilderLabel.CHANNEL_FLAG]
         self.jpush_appkey = info[BuilderLabel.JPUSH_APPKEY_FLAG]
         self.minify_enabled = str(info[BuilderLabel.MINIFY_ENABLED_FLAG]).lower()
+        self.upload_bugly = str(info[BuilderLabel.UPLOAD_BUGLY_FLAG]).lower()
 
     def get_basic_map(self):
         rtn_map = {}
@@ -534,6 +537,7 @@ class BuildManager:
         params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
         params[BuilderLabel.JPUSH_APPKEY_FLAG] = self.jpush_appkey
         params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled
+        params[BuilderLabel.UPLOAD_BUGLY_FLAG] = self.upload_bugly
 
         # 获取网络api version配置信息
         if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:
@@ -657,8 +661,8 @@ class BuildManager:
                 self._write_build_info()
                 # 生成apk描述信息
                 desc_data = self._generate_desc()
-                # 打包mapping文件
-                self._zip_mapping_files(main_prj_path)
+                # 打包并上传bugly符号表文件
+                self._upload_bugly_symbol_files(main_prj_path)
 
                 target_name = os.path.basename(self.apk_output_path)
                 to_upload_path = os.path.dirname(self.apk_output_path)
@@ -702,22 +706,25 @@ class BuildManager:
         build_info_path = os.path.join(self.output_directory, readme_file_name)
         file_util.write_to_file(build_info_path, build_info, encoding='utf-8')
 
-    # 打包mapping文件，前提是启用了混淆
-    def _zip_mapping_files(self, main_prj_path):
-        if not self.minify_enabled: return
-        build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
-        app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
-        ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
-        net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].title()
-        mapping_out_path = main_prj_path + f'/build/outputs/mapping/{app_code}{net_env}{build_type}/'
-        mapping_file_name = os.path.join(mapping_out_path, 'mapping.txt')
-        mapping_zip_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
-        mapping_info_path = os.path.join(self.output_directory, mapping_zip_name)
-        file_items = file_util.get_child_files(mapping_out_path)
-        log_info('zip mapping files into {}.'.format(mapping_info_path))
-        zip_util.zip_files(file_items, mapping_info_path, mapping_out_path, True)
-        log_info('upload bugly symbol ... ver_env:{}, app_code:{}, app_version:{}, mapping_file:{}'.format(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name))
-        BuglyManager(self.work_path).uploadSymbol(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name)
+    # 打包并上传符号表文件到bugly，前提是启用了代码混淆并且开启了上传到bugly的开关
+    def _upload_bugly_symbol_files(self, main_prj_path):
+        if self.minify_enabled and self.upload_bugly:
+            try:
+                build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
+                app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
+                ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
+                net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].title()
+                mapping_out_path = main_prj_path + f'/build/outputs/mapping/{app_code}{net_env}{build_type}/'
+                mapping_file_name = os.path.join(mapping_out_path, 'mapping.txt')
+                mapping_zip_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
+                mapping_info_path = os.path.join(self.output_directory, mapping_zip_name)
+                file_items = file_util.get_child_files(mapping_out_path)
+                log_info('zip mapping files into {}.'.format(mapping_info_path))
+                zip_util.zip_files(file_items, mapping_info_path, mapping_out_path, True)
+                log_info('upload bugly symbol ... ver_env:{}, app_code:{}, app_version:{}, mapping_file:{}'.format(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name))
+                BuglyManager(self.work_path).uploadSymbol(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name)
+            except Exception:
+                log_error('upload bugly symbol files error.')
 
     def _protect_file(self, main_prj_path):
         ip = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.IP_FLAG]
@@ -817,7 +824,7 @@ def main(args):
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='config log dir and work path')
     parser.add_argument('-ld', dest='log_dir', help='dir which logs stores in', default='/data/log/app_server')
-    parser.add_argument('-wp', dest='work_path', help='work path which package app', default='D:/tools/package_app/public/build_script/android/app')
+    parser.add_argument('-wp', dest='work_path', help='work path which package app', default='D:/svn/public/build_script/android/app')
     parser.add_argument('-sh', dest='server_host', help='local server host name', default=None)
     parser.add_argument('-sp', dest='server_port', help='local server port', default=9998)
     parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='192.168.20.214')

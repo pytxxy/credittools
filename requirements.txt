@@ -1,3 +1,4 @@
+rpyc
 xmltodict
 pycurl
 creditutils
