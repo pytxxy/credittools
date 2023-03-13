@@ -72,7 +72,7 @@ def get_cmd_format(toolkit, is_batch=True):
         return exec_file + ' put -c {} {} {}'
 
 # 更新渠道
-def update_channel(toolkit, src_file, dst_file, channel):
+def update_channel(toolkit=Toolkit.vas_dolly, src_file=None, dst_file=None, channel=None):
     _CMD_FORMAT = get_cmd_format(toolkit, False)
     if os.path.isfile(src_file):
         if os.path.isfile(dst_file):
@@ -86,7 +86,7 @@ def update_channel(toolkit, src_file, dst_file, channel):
         raise Exception(info)
     
 # 批量更新渠道
-def batch_update_channel(toolkit, src_path, dst_dir, config_file):
+def batch_update_channel(toolkit=Toolkit.vas_dolly, src_path=None, dst_dir=None, config_file=None):
     if os.path.isfile(src_path):
         # apk_items = apk_util.get_apk_info(src_path)
         if os.path.isfile(config_file):
