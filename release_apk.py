@@ -177,7 +177,7 @@ class Generator:
         config_path_array = ['config', 'channel', self.app_code, 'target.txt']
         config_relative_path = os.sep.join(config_path_array)
         config_path = os.path.join(self.work_path, config_relative_path)
-        update_apk_channel.batch_update_channel(src_apk_path, self.apk_channel_path, config_path)
+        update_apk_channel.batch_update_channel(src_path=src_apk_path, dst_dir=self.apk_channel_path, config_file=config_path)
 
     def _download_single_exceptional_apk(self, channel):
         download_manager.download_sftp_file(self.sftp_config_path, self.apk_channel_path, self.ver_name, sftp_root_tag=self.app_code, channel=channel, as_file=False)
