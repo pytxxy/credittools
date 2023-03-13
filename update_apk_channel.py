@@ -14,56 +14,10 @@ import platform
 import creditutils.file_util as file_util
 
 
-def update_channel(src_file, dst_file, channel):
-    _CMD_FORMAT = 'walle.bat put -c {} {} {}'
-    if os.path.isfile(src_file):
-        if os.path.isfile(dst_file):
-            os.remove(dst_file)
-
-        to_run_cmd = _CMD_FORMAT.format(channel, src_file, dst_file)
-        subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
-    else:
-        info = f'{src_file} not exists!'
-        raise Exception(info)
-
-
-def batch_update_channel(src_path, dst_dir, config_file):
-    if os.path.isfile(src_path):
-        # apk_items = apk_util.get_apk_info(src_path)
-        if os.path.isfile(config_file):
-            # 先进行批量处理
-            _system = platform.system()
-            if _system == 'Windows':
-                _CMD_FORMAT = 'walle.bat batch -f {} {} {}'
-            elif _system == 'Linux':
-                _CMD_FORMAT = 'walle.sh batch -f {} {} {}'
-            else:
-                _CMD_FORMAT = 'walle.sh batch -f {} {} {}'
-            to_run_cmd = _CMD_FORMAT.format(config_file, src_path, dst_dir)
-            subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
-
-            # 读取全部渠道信息
-            parser = ConfigParser(config_file)
-            parser.parse()
-            channels = parser.get_config()
-
-            # 进行重命名操作
-            src_name = os.path.basename(src_path)
-            for item in channels:
-                src_item_path = os.path.join(dst_dir, get_middle_name(src_name, '_' + item))
-                # 输出名称直接使用渠道名称
-                dst_item_path = os.path.join(dst_dir, item + '.apk')
-                if os.path.isfile(dst_item_path):
-                    os.remove(dst_item_path)
-
-                os.rename(src_item_path, dst_item_path)
-        else:
-            info = f'{config_file} not exists!'
-            raise Exception(info)
-    else:
-        info = f'{src_path} not exists!'
-        raise Exception(info)
-
+# 打渠道包的工具
+class Toolkit(enumerate):
+    walle = 'walle' # https://github.com/Meituan-Dianping/walle
+    vas_dolly = "vas_dolly" # https://github.com/Tencent/VasDolly
 
 # 负责渠道列表的解析
 class ConfigParser:
@@ -98,17 +52,86 @@ def get_middle_path(src_path, suffix=None):
     return os.path.join(file_path, get_middle_name(filename, suffix))
 
 
+# 获取执行脚本的后缀名
+def get_extension():
+    _extension = '.sh'
+    _system = platform.system()
+    if _system == 'Windows':
+        _extension = '.bat'
+    return _extension
+
+# 获取命令格式串
+def get_cmd_format(toolkit, is_batch=True):
+    exec_file = toolkit + get_extension()
+    if is_batch:
+        if Toolkit.vas_dolly == toolkit:
+            return exec_file + ' put -c {} -f {} {}'
+        elif Toolkit.walle == toolkit:
+            return exec_file + ' batch -f {} {} {}'
+    else:
+        return exec_file + ' put -c {} {} {}'
+
+# 更新渠道
+def update_channel(toolkit, src_file, dst_file, channel):
+    _CMD_FORMAT = get_cmd_format(toolkit, False)
+    if os.path.isfile(src_file):
+        if os.path.isfile(dst_file):
+            os.remove(dst_file)
+
+        to_run_cmd = _CMD_FORMAT.format(channel, src_file, dst_file)
+        print("to_run_cmd: ", to_run_cmd)
+        subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
+    else:
+        info = f'{src_file} not exists!'
+        raise Exception(info)
+    
+# 批量更新渠道
+def batch_update_channel(toolkit, src_path, dst_dir, config_file):
+    if os.path.isfile(src_path):
+        # apk_items = apk_util.get_apk_info(src_path)
+        if os.path.isfile(config_file):
+            # 先进行批量处理
+            _CMD_FORMAT = get_cmd_format(toolkit, True)
+            to_run_cmd = _CMD_FORMAT.format(config_file, src_path, dst_dir)
+            print("to_run_cmd_batch: ", to_run_cmd)
+            subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
+
+            # 读取全部渠道信息
+            parser = ConfigParser(config_file)
+            parser.parse()
+            channels = parser.get_config()
+
+            # 进行重命名操作
+            src_name = os.path.basename(src_path)
+            for item in channels:
+                # vas_dolly和walle生成的后缀名不同，要区别对待
+                item_path = get_middle_name(item + '-', src_name)
+                if Toolkit.walle == toolkit:
+                    item_path = get_middle_name(src_name, '_' + item)
+                src_item_path = os.path.join(dst_dir, item_path)
+                # 输出名称直接使用渠道名称
+                dst_item_path = os.path.join(dst_dir, item + '.apk')
+                if os.path.isfile(dst_item_path):
+                    os.remove(dst_item_path)
+                # 重命名    
+                os.rename(src_item_path, dst_item_path)
+        else:
+            info = f'{config_file} not exists!'
+            raise Exception(info)
+    else:
+        info = f'{src_path} not exists!'
+        raise Exception(info)
+
+
 # 对输入参数进行解析，设置相应参数
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='update channel info.')
     parser.add_argument('src', metavar='src', help='the source file to be updated channel info')
     parser.add_argument('dst', metavar='dst', help='the destine file to write')
     parser.add_argument('channel', metavar='channel', help='channel info')
-    parser.add_argument('-b', dest='is_batch', action='store_true', default=False,
-                        help='indicate the channel value is a channel configure file')
-
-    #     parser.print_help()
-
+    parser.add_argument('-b', dest='is_batch', action='store_true', default=False, help='indicate the channel value is a channel configure file')
+    parser.add_argument('--toolkit', metavar='toolkit', dest='toolkit', default=Toolkit.vas_dolly, help='tools for making channel packs')
+    # parser.print_help()
     return parser.parse_args(src_args)
 
 
@@ -119,13 +142,13 @@ def main(args):
         if not args.is_batch:
             channel = args.channel
             if not os.path.isfile(channel):
-                update_channel(src, dst, channel)
+                update_channel(args.toolkit, src, dst, channel)
             else:
                 info = f'{channel} is a configure file, not a channel flag!'
                 raise Exception(info)
         else:
             config_file = args.channel
-            batch_update_channel(src, dst, config_file)
+            batch_update_channel(args.toolkit, src, dst, config_file)
     else:
         info = f'{src} not exists!'
         raise Exception(info)
