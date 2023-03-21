@@ -77,7 +77,7 @@ def update_channel(toolkit=Toolkit.vas_dolly, src_file=None, dst_file=None, chan
     if os.path.isfile(src_file):
         if os.path.isfile(dst_file):
             os.remove(dst_file)
-
+        file_util.replace_file(src_file, dst_file)
         to_run_cmd = _CMD_FORMAT.format(channel, src_file, dst_file)
         print("to_run_cmd: ", to_run_cmd)
         subprocess.run(to_run_cmd, shell=True, check=True, universal_newlines=True)
