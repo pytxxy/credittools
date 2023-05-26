@@ -691,12 +691,13 @@ class BuildManager:
 
         return source_name
 
-    def _upload_file(self, source_name, target_name, to_upload_path):
+    def _upload_file(self, source_name, target_name, to_upload_path, desc_data=None):
         result = re.match(BuildManager.__APK_OUTPUT_PATH_PATTERN, target_name)
         if result:
             ver_name_info = result.group(1)
         else:
             str_info = 'The output file name {} is invalid!'.format(target_name)
+            print(str_info)
             raise Exception(str_info)
 
         # ftp_config_path = os.path.join(self.work_path, 'config')
@@ -705,8 +706,7 @@ class BuildManager:
         print('target_name: ', target_name)
         print('source_name:', source_name)
 
-        ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, 'gzjd',
-                                  to_upload_path, mobile_os='Android', target_file_name=target_name, source_file_name=source_name)
+        ftp_upload.upload_to_sftp(ftp_config_path, ver_name_info, self.ver_env, self.prj_code_ver, 'gzjd', to_upload_path, mobile_os='Android', target_file_name=target_name, source_file_name=source_name, desc_data=desc_data)
 
 
 def main(args):
