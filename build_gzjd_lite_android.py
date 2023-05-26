@@ -649,8 +649,8 @@ class BuildManager:
                 build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
                 app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
                 ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
-                net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].title()
-                mapping_out_path = main_prj_path + f'/build/outputs/mapping/{app_code}{net_env}{build_type}/'
+                net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
+                mapping_out_path = main_prj_path + f'/build/outputs/mapping/{net_env}{build_type}/'
                 mapping_file_name = os.path.join(mapping_out_path, 'mapping.txt')
                 mapping_zip_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
                 mapping_info_path = os.path.join(self.output_directory, mapping_zip_name)
