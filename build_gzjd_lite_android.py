@@ -5,6 +5,7 @@ import time
 import re
 from enum import IntEnum
 import platform
+from bugly_upload_symbol import BuglyManager
 
 import ftp_upload
 import creditutils.apk_builder_util as apk_builder
@@ -25,6 +26,7 @@ import creditutils.apk_util as apk_util
 
 BuilderVer = IntEnum('BuilderVer', ('JavaLast', 'Kotlin01'))
 
+
 _system = platform.system()
 if _system == 'Windows':
     _system_pre = ''
@@ -35,6 +37,7 @@ elif _system == 'Linux':
 else:
     _system_pre = 'bash '
     _system_suffix = ''
+
 
 class BuilderLabel:
     PRJ_ROOT_FLAG = 'prj_root'
@@ -93,7 +96,10 @@ class BuilderLabel:
     LABEL_FLAG = 'label'
     BETA_LABEL_FLAG = 'beta_label'
     HTTPDNS_FLAG = 'httpdns'
-    NET_VAR_FLAG = 'net_var'
+
+    CODE_VER_FLAG = 'code_ver'
+    MINIFY_ENABLED_FLAG = 'minify_enabled'
+    UPLOAD_BUGLY_FLAG = 'upload_bugly'
 
 
 class BuildCmd:
@@ -101,15 +107,15 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'api_ver', 'for_publish',
-               'coverage_enabled', 'httpdns', 'demo_label', 'entrance']
+               'coverage_enabled', 'httpdns', 'demo_label', 'entrance', 'minify_enabled']
 
     cmd_format = exec_name + ' --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PFOR_PUBLISH={for_publish} ' \
-                      '-PHTTP_DNS_OPEN={httpdns} -PWEB_URL={entrance}'
+        '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PAPI_VERSION={api_ver} -PFOR_PUBLISH={for_publish} ' \
+        '-PHTTP_DNS_OPEN={httpdns} -PWEB_URL={entrance} -PMINIFY_ENABLED={minify_enabled}'
 
     cmd_format_without_api_ver = exec_name + ' --configure-on-demand {action}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-                      '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PFOR_PUBLISH={for_publish}  ' \
-                      '-PHTTP_DNS_OPEN={httpdns} -PWEB_URL={entrance}'
+        '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PFOR_PUBLISH={for_publish}  ' \
+        '-PHTTP_DNS_OPEN={httpdns} -PWEB_URL={entrance} -PMINIFY_ENABLED={minify_enabled}'
 
     def __init__(self):
         # 先初始化默认值
@@ -150,6 +156,8 @@ class BuildCmd:
 
         env_mode = info[BuilderLabel.ENV_MODE_FLAG]
         self.httpdns = info[BuilderLabel.ENV_FLAG][BuilderLabel.HTTPDNS_FLAG][env_mode].lower()
+        self.minify_enabled = str(info[BuilderLabel.MINIFY_ENABLED_FLAG]).lower()
+        self.upload_bugly = str(info[BuilderLabel.UPLOAD_BUGLY_FLAG]).lower()
 
     def get_map(self):
         rtn_map = {}
@@ -286,8 +294,7 @@ class ProjectBuilder:
 
         apk_out_path = self.main_prj_path + '/build/outputs/apk/'
         # 自定义名称形式
-        apk_path = os.path.join(apk_out_path, self._get_output_relative_path(), 
-                                self.info[BuilderLabel.OUTPUT_NAME_FLAG])
+        apk_path = os.path.join(apk_out_path, self._get_output_relative_path(), self.info[BuilderLabel.OUTPUT_NAME_FLAG])
         apk_path = os.path.normpath(apk_path)
 
         # 先把现有的apk文件直接删除
@@ -305,13 +312,11 @@ class ProjectBuilder:
 
             actual_ver_name = self.get_main_ver_name(apk_items['versionName'])
             if actual_ver_name != self.info[BuilderLabel.VER_NAME_FLAG]:
-                info = 'set version name is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_NAME_FLAG],
-                                                                          actual_ver_name)
+                info = 'set version name is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_NAME_FLAG], actual_ver_name)
                 raise Exception(info)
 
             if apk_items['versionCode'] != str(self.info[BuilderLabel.VER_CODE_FLAG]):
-                info = 'set version code is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_CODE_FLAG],
-                                                                          apk_items['versionCode'])
+                info = 'set version code is {}, but actual is {}!'.format(self.info[BuilderLabel.VER_CODE_FLAG], apk_items['versionCode'])
                 raise Exception(info)
 
             dst_file = self.info[BuilderLabel.OUTPUT_DIRECTORY_FLAG] + os.sep + self.info[
@@ -320,15 +325,14 @@ class ProjectBuilder:
 
             # 拷贝编译生成的class文件，便于服务器生成代码覆盖率文件
             if BuilderLabel.BUILD_CLASS_FLAG in self.info and len(self.info[BuilderLabel.BUILD_CLASS_FLAG]) >= 2:
-                src_class_path = self.main_prj_path + os.sep + self.info[BuilderLabel.BUILD_CLASS_FLAG][
-                    BuilderLabel.SRC_PATH_FLAG]
+                src_class_path = self.main_prj_path + os.sep + self.info[BuilderLabel.BUILD_CLASS_FLAG][BuilderLabel.SRC_PATH_FLAG]
                 src_class_path = file_util.normalpath(src_class_path)
 
                 dst_class_relative_path = self.info[BuilderLabel.BUILD_CLASS_FLAG][BuilderLabel.DST_PATH_FLAG]
                 dst_class_zip_path = self.info[BuilderLabel.OUTPUT_DIRECTORY_FLAG] + os.sep + 'classes.zip'
 
                 if os.path.isdir(src_class_path):
-                    #                     shutil.copytree(src_class_path, dst_class_path)
+                    # shutil.copytree(src_class_path, dst_class_path)
                     rev_index = -len(dst_class_relative_path)
                     zip_src_root = src_class_path[:rev_index]
                     zip_util.zip_dir(src_class_path, dst_class_zip_path, zip_src_root)
@@ -427,8 +431,7 @@ class BuildManager:
         self.ori_build_config = configParser.get_config()
 
         # project目录
-        ori_project_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
-            BuildConfigLabel.PRJ_PATH_FLAG])
+        ori_project_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.PRJ_PATH_FLAG])
         self.project_path = file_util.normalpath(ori_project_path)
 
     def _get_whole_ver_name(self, beta_label_map, label_map):
@@ -451,19 +454,53 @@ class BuildManager:
         whole_ver_name = '{}{}{}{}'.format(self.ver_name, beta_label, net_env_label, ver_no_label)
         return whole_ver_name
 
+    def _get_code_api_ver(self, file_path, target_key):
+        file_data = file_util.read_file_content(file_path)
+        ptn_str_format = '({}\s*=\s*)([^\s]*)'
+        ptn_str = ptn_str_format.format(target_key)
+        ptn = re.compile(ptn_str, flags=(re.I | re.M))
+
+        result = ptn.search(file_data)
+        if result:
+            return result.group(2)
+        else:
+            return None
+
+    def _generate_desc(self):
+        curr_api_ver = None
+        if self.api_ver:
+            curr_api_ver = self.api_ver
+        else:
+            if self.api_ver_config:
+                file_item_format = self.api_ver_config[BuildConfigLabel.FILE_ITEM_FLAG]
+                file_item = file_item_format.format(app_code=self.app_code)
+                relative_path = file_util.normalpath(file_item)
+                file_path = os.path.join(self.prj_root, relative_path)
+                target_key = self.api_ver_config[BuildConfigLabel.KEY_FLAG]
+                curr_api_ver = self._get_code_api_ver(file_path, target_key)
+
+        desc_data = dict()
+        desc_data[BuilderLabel.VER_NAME_FLAG] = self.whole_ver_name
+        desc_data[BuilderLabel.CODE_VER_FLAG] = self.prj_code_ver
+        desc_data[BuilderLabel.VER_CODE_FLAG] = self.ver_code
+        if curr_api_ver:
+            desc_data[BuilderLabel.API_VER_FLAG] = curr_api_ver
+
+        return desc_data
+
     # 配置每个工程个性化的内容
     def _get_pro_build_config(self):
         # 指定项目地址
         params = dict()
 
         params[BuilderLabel.PRJ_ROOT_FLAG] = self.prj_root
-        params[BuilderLabel.MAIN_FLAG] = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
-            BuildConfigLabel.MAIN_FLAG]
+        params[BuilderLabel.MAIN_FLAG] = self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.MAIN_FLAG]
 
         params[BuilderLabel.NET_ENV_FLAG] = self.ver_env
-        params[BuilderLabel.ENV_MODE_FLAG] = \
-            self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
+        params[BuilderLabel.ENV_MODE_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
+        params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled
+        params[BuilderLabel.UPLOAD_BUGLY_FLAG] = self.upload_bugly
 
         # 获取加固配置信息
         params[BuilderLabel.PROTECT_FLAG] = self.ori_build_config[BuildConfigLabel.PROTECT_FLAG]
@@ -477,8 +514,7 @@ class BuildManager:
         curr_time = time.localtime()
         time_str = time.strftime('%Y%m%d_%H%M%S', curr_time)
 
-        output_directory = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][
-            BuildConfigLabel.TARGET_PATH_FLAG])
+        output_directory = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.TARGET_PATH_FLAG])
         output_directory = file_util.normalpath(output_directory)
         output_directory = os.path.join(output_directory, self.ver_env, time_str)
         params[BuilderLabel.OUTPUT_DIRECTORY_FLAG] = output_directory
@@ -494,7 +530,6 @@ class BuildManager:
 
         params[BuilderLabel.ENV_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG]
 
-
         # 指定输出归档文件地址
         date_str = time.strftime('%Y%m%d', curr_time)
 
@@ -503,20 +538,15 @@ class BuildManager:
         self.whole_ver_name = self._get_whole_ver_name(beta_label_map, label_map)
         if self.is_debug:
             mode_flag = apk_builder.DEBUG_FLAG
-
             # 指定输出apk名称
-            params[BuilderLabel.OUTPUT_NAME_FLAG] = "{}-{}-{}-{}.apk".format(self.whole_ver_name, self.ver_code,
-                                                                             mode_flag,
-                                                                             date_str)
+            params[BuilderLabel.OUTPUT_NAME_FLAG] = "{}-{}-{}-{}.apk".format(self.whole_ver_name, self.ver_code, mode_flag, date_str)
         else:
             mode_flag = apk_builder.RELEASE_FLAG
-
             # 指定输出apk名称
             params[BuilderLabel.OUTPUT_NAME_FLAG] = "{}-{}-{}.apk".format(self.whole_ver_name, self.ver_code, date_str)
 
         params[BuilderLabel.TYPE_FLAG] = mode_flag
-        self.apk_output_path = os.path.join(params[BuilderLabel.OUTPUT_DIRECTORY_FLAG],
-                                            params[BuilderLabel.OUTPUT_NAME_FLAG])
+        self.apk_output_path = os.path.join(params[BuilderLabel.OUTPUT_DIRECTORY_FLAG], params[BuilderLabel.OUTPUT_NAME_FLAG])
 
         pprint.pprint(params)
 
@@ -558,6 +588,10 @@ class BuildManager:
             if os.path.exists(self.apk_output_path) and os.path.isfile(self.apk_output_path):
                 # 将编译信息写文件
                 self._write_build_info()
+                # 生成apk描述信息
+                desc_data = self._generate_desc()
+                # 打包并上传bugly符号表文件
+                self._upload_bugly_symbol_files(main_prj_path)
 
                 target_name = os.path.basename(self.apk_output_path)
                 to_upload_path = os.path.dirname(self.apk_output_path)
@@ -574,7 +608,7 @@ class BuildManager:
 
                 # 进行编译好的版本提交操作
                 if hasattr(self, 'to_upload') and self.to_upload:
-                    self._upload_file(source_name, target_name, to_upload_path)
+                    self._upload_file(source_name, target_name, to_upload_path, desc_data=desc_data)
             else:
                 str_info = 'Build failed, code version is {}.'.format(self.prj_code_ver)
                 print(str_info)
@@ -587,8 +621,7 @@ class BuildManager:
     def _update_local_build_file(self):
         # 更新android sdk本地配置
         local_file_name = 'local.properties'
-        static_config_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.ROOT_FLAG][
-            BuildConfigLabel.STATIC_FLAG])
+        static_config_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.ROOT_FLAG][BuildConfigLabel.STATIC_FLAG])
         static_config_path = file_util.normalpath(static_config_path)
         local_build_file = os.path.join(static_config_path, local_file_name)
         target_build_file = os.path.join(self.prj_root, local_file_name)
@@ -597,11 +630,30 @@ class BuildManager:
     # 将编译信息写到文件中
     def _write_build_info(self):
         build_info_format = self.ori_build_config[BuildConfigLabel.BUILD_INFO_TEMPLET_FLAG]
-        build_info = build_info_format.format(ver_name=self.whole_ver_name, code_ver=self.prj_code_ver,
-                                              ver_code=self.ver_code)
+        build_info = build_info_format.format(ver_name=self.whole_ver_name, code_ver=self.prj_code_ver, ver_code=self.ver_code)
         readme_file_name = 'readme-{}-{}.txt'.format(self.whole_ver_name, self.ver_code)
         build_info_path = os.path.join(self.output_directory, readme_file_name)
         file_util.write_to_file(build_info_path, build_info, encoding='utf-8')
+
+    # 打包并上传符号表文件到bugly，前提是启用了代码混淆并且开启了上传到bugly的开关
+    def _upload_bugly_symbol_files(self, main_prj_path):
+        if self.minify_enabled and self.upload_bugly:
+            try:
+                build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
+                app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
+                ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
+                net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].title()
+                mapping_out_path = main_prj_path + f'/build/outputs/mapping/{app_code}{net_env}{build_type}/'
+                mapping_file_name = os.path.join(mapping_out_path, 'mapping.txt')
+                mapping_zip_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
+                mapping_info_path = os.path.join(self.output_directory, mapping_zip_name)
+                file_items = file_util.get_child_files(mapping_out_path)
+                print('zip mapping files into {}.'.format(mapping_info_path))
+                zip_util.zip_files(file_items, mapping_info_path, mapping_out_path, True)
+                print('upload bugly symbol ... ver_env:{}, app_code:{}, app_version:{}, mapping_file:{}'.format(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name))
+                BuglyManager(self.work_path).uploadSymbol(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name)
+            except Exception:
+                print('upload bugly symbol files error.')
 
     def _protect_file(self, main_prj_path):
         ip = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.IP_FLAG]
@@ -616,8 +668,7 @@ class BuildManager:
         else:
             to_sign_path = protected_path
 
-        keystore = os.path.join(main_prj_path, self.pro_build_config[BuilderLabel.SIGNER_FLAG][
-            BuilderLabel.KEYSTORE_FLAG])
+        keystore = os.path.join(main_prj_path, self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.KEYSTORE_FLAG])
         storepass = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREPASS_FLAG]
         storealias = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREALIAS_FLAG]
         signed_path = apk.get_default_signed_path(protected_path)
@@ -661,34 +712,27 @@ def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='update code if need, build if need.')
     parser.add_argument('work_path', metavar='work_path', help='working directory')
 
-    parser.add_argument('-c', metavar='base_config', dest='base_config',
-                        help='base configure file, path relative to work path')
-    parser.add_argument('-u', dest='to_update', action='store_true', default=False,
-                        help='indicate to get or update code firstly')
+    parser.add_argument('-c', metavar='base_config', dest='base_config', help='base configure file, path relative to work path')
+    parser.add_argument('-u', dest='to_update', action='store_true', default=False, help='indicate to get or update code firstly')
     parser.add_argument('-b', dest='to_build', action='store_true', default=False, help='indicate to build')
-    parser.add_argument('-v', metavar='code_ver', dest='code_ver', action='store', default=None,
-                        help='indicate updating to special version')
-    parser.add_argument('-d', dest='is_debug', action='store_true', default=False,
-                        help='indicate to build debug version')
+    parser.add_argument('-v', metavar='code_ver', dest='code_ver', action='store', default=None, help='indicate updating to special version')
+    parser.add_argument('-d', dest='is_debug', action='store_true', default=False, help='indicate to build debug version')
 
     parser.add_argument('--vername', metavar='ver_name', dest='ver_name', help='version name')
     parser.add_argument('--vercode', metavar='ver_code', dest='ver_code', type=int, help='version code')
     parser.add_argument('--verno', metavar='ver_no', dest='ver_no', type=int, default=0, help='version release number')
-    parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, default='test',
-                        choices=['dev', 'test', 'pre', 'pro'],
-                        help='dev: develop environment; test: test environment; '
-                             'pre: pre-release environment; pro: production environment; ')
+    parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, default='test', choices=['dev', 'test', 'pre', 'pro'],
+                        help='dev: develop environment; test: test environment; pre: pre-release environment; pro: production environment; ')
 
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', type=str, help='network api version number')
 
-    parser.add_argument('--test', dest='is_test', action='store_true', default=False,
-                        help='indicate just to test config')
-    parser.add_argument('--align', dest='to_align', action='store_true', default=True,
-                        help='indicate to align apk file after protected')
-    parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
-                        help='indicate to upload build files')
+    parser.add_argument('--test', dest='is_test', action='store_true', default=False, help='indicate just to test config')
+    parser.add_argument('--align', dest='to_align', action='store_true', default=True, help='indicate to align apk file after protected')
+    parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--entrance', metavar='entrance', dest='entrance', default='https://www.gongzhongjiandu.org/', help='web entrance')
+    parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
+    parser.add_argument('--upload_bugly', dest='upload_bugly', action='store_true', default=True, help='upload bugly symbol files, mapping.txt etc.')
 
     #     parser.print_help()
 
