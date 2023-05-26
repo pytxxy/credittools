@@ -361,6 +361,7 @@ class BuildConfigLabel:
     STATIC_FLAG = 'static'
     CODE_URL_FLAG = 'code_url'
 
+    API_VER_FLAG = 'api_ver'
     NETWORK_FLAG = 'network'
     RELATIVE_PATH_FLAG = 'relative_path'
 
@@ -434,6 +435,8 @@ class BuildManager:
         ori_project_path = os.path.join(self.work_path, self.ori_build_config[BuildConfigLabel.WORKSPACE_FLAG][BuildConfigLabel.PRJ_PATH_FLAG])
         self.project_path = file_util.normalpath(ori_project_path)
 
+        self.api_ver_config = None
+
     def _get_whole_ver_name(self, beta_label_map, label_map):
         beta_label = 'beta'
         ver_no_label = ''
@@ -501,6 +504,10 @@ class BuildManager:
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
         params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled
         params[BuilderLabel.UPLOAD_BUGLY_FLAG] = self.upload_bugly
+
+        # 获取网络api version配置信息
+        if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:
+            self.api_ver_config = self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.API_VER_FLAG]
 
         # 获取加固配置信息
         params[BuilderLabel.PROTECT_FLAG] = self.ori_build_config[BuildConfigLabel.PROTECT_FLAG]
