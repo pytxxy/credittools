@@ -646,8 +646,8 @@ class BuildManager:
     def _upload_bugly_symbol_files(self, main_prj_path):
         if self.minify_enabled and self.upload_bugly:
             try:
+                app_code = 'gzjd'
                 build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
-                app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
                 ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
                 net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
                 mapping_out_path = main_prj_path + f'/build/outputs/mapping/{net_env}{build_type}/'
@@ -659,8 +659,8 @@ class BuildManager:
                 zip_util.zip_files(file_items, mapping_info_path, mapping_out_path, True)
                 print('upload bugly symbol ... ver_env:{}, app_code:{}, app_version:{}, mapping_file:{}'.format(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name))
                 BuglyManager(self.work_path).uploadSymbol(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name)
-            except Exception:
-                print('upload bugly symbol files error.')
+            except Exception as a:
+                print('upload bugly symbol files error.', a)
 
     def _protect_file(self, main_prj_path):
         ip = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.IP_FLAG]
