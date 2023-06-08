@@ -32,6 +32,7 @@ import creditutils.dingtalk_util as dingtalk_util
 
 APK_SUFFIX = '.apk'
 
+
 class ConfigLabel:
     ROOT_FLAG = 'config'
     TARGET_PATH_FLAG = 'target_path'
@@ -111,7 +112,7 @@ class Generator:
         self.apk_root_parent_path = os.path.join(self.work_path, target_path, self.app_code)
         self.apk_root_path = os.path.join(self.work_path, target_path, self.app_code, self.ver_name)
         self.apk_root_path = file_util.normalpath(self.apk_root_path)
-        
+
         channel_relative = self.common_config[ConfigLabel.RELATIVE_FLAG][ConfigLabel.CHANNEL_FLAG]
         self.apk_channel_path = os.path.join(self.apk_root_path, channel_relative)
         self.apk_channel_path = file_util.normalpath(self.apk_channel_path)
@@ -168,7 +169,7 @@ class Generator:
                     break
 
         return src_apk_path
-    
+
     def generate_channel_apk(self):
         src_apk_path = self._get_source_apk()
         if not src_apk_path:
@@ -181,12 +182,12 @@ class Generator:
 
     def _download_single_exceptional_apk(self, channel):
         download_manager.download_sftp_file(self.sftp_config_path, self.apk_channel_path, self.ver_name, sftp_root_tag=self.app_code, channel=channel, as_file=False)
-    
+
     def download_exceptional_apk(self):
         config_path_array = ['config', 'channel', self.app_code, 'exception.txt']
         config_relative_path = os.sep.join(config_path_array)
         config_path = os.path.join(self.work_path, config_relative_path)
-        
+
         if os.path.isfile(config_path):
             parser = update_apk_channel.ConfigParser(config_path)
             parser.parse()
@@ -198,7 +199,6 @@ class Generator:
         app_version_digits = self.ver_name.replace('.', '')
         name_pre = f'{self.app_code}{app_version_digits}apk'
         return name_pre
-
 
     def zip_channel_apk(self):
         para_dict = dict()
@@ -217,12 +217,13 @@ class Generator:
 
 
 class Uploader:
-    def __init__(self, work_path, app_code, ver_name):
+    def __init__(self, work_path, app_code, ver_name, bucket_domain):
         self.work_path = os.path.abspath(work_path)
         self.app_code = app_code
         self.ver_name = ver_name
         self.common_config = None
         self.upload_config = None
+        self.bucket_domain = bucket_domain
 
         self._parse_base_config()
 
@@ -258,7 +259,7 @@ class Uploader:
         filename = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
         file_path = os.path.join(channel_dir_path, filename)
         return file_path
-    
+
     def _get_official_target_file_name(self):
         src_name = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
         pure_name = src_name
@@ -306,7 +307,7 @@ class Uploader:
         cp = subprocess.run(cmd_str, check=True, shell=True)
         if cp.returncode != 0:
             raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
-    
+
     # 单独上传一份官方包，便于配置升级
     def upload_official_file(self):
         apk_file_path = self._get_official_file_path()
@@ -324,12 +325,18 @@ class Uploader:
         if cp.returncode != 0:
             raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
 
+    def get_bucket_domain(self):
+        if self.bucket_domain is not None:
+            return self.bucket_domain
+        else:
+            return self.upload_config[ConfigLabel.DOMAIN_FLAG]
+
     def get_zip_uploaded_list(self):
         tag = ConfigLabel.ZIP_FLAG
         apk_tag_path = self._get_src_path(tag)
         bucket_path = self._get_bucket_path(tag)
         bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
-        domain = self.upload_config[ConfigLabel.DOMAIN_FLAG]
+        domain = self.get_bucket_domain()
         domain_path = bucket_path.replace(bucket, domain)
         result = list()
         file_list = os.listdir(apk_tag_path)
@@ -341,11 +348,11 @@ class Uploader:
                     result.append(domain_file_path)
 
         return result
-        
+
     def get_official_addr(self):
         bucket_path = self._get_official_bucket_path()
         bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
-        domain = self.upload_config[ConfigLabel.DOMAIN_FLAG]
+        domain = self.get_bucket_domain()
         domain_path = bucket_path.replace(bucket, domain)
         return domain_path
 
@@ -408,7 +415,7 @@ class Notifier:
         time_now = str(datetime.datetime.now())
         time_now = time_now[:time_now.rindex('.')]
         app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
-        values = {'app_name':app_name, 'ver_name':self.ver_name, 'time_now':time_now}
+        values = {'app_name': app_name, 'ver_name': self.ver_name, 'time_now': time_now}
         return self._fill_template_data(template, values)
 
     def _get_mail_content(self, template, addr, prd_desc):
@@ -416,12 +423,12 @@ class Notifier:
         if prd_desc:
             prd_desc = str(base64.b64decode(prd_desc), encoding='utf-8')
         app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
-        values = {'app_name':app_name, 'ver_name':self.ver_name, 'addr':addr, 'prd_desc':prd_desc}
+        values = {'app_name': app_name, 'ver_name': self.ver_name, 'addr': addr, 'prd_desc': prd_desc}
         return self._fill_template_data(template, values)
 
     def _get_dingtalk_message(self, template, addr):
         app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
-        values = {'app_name':app_name, 'ver_name':self.ver_name, 'addr':addr}
+        values = {'app_name': app_name, 'ver_name': self.ver_name, 'addr': addr}
         return self._fill_template_data(template, values)
 
     def parse_receiver(self, config_data):
@@ -464,10 +471,10 @@ class Notifier:
                 mobiles.append(mobile_obj)
 
         data = {
-            'msgtype': 'text', 
+            'msgtype': 'text',
             'text': {
                 'content': info
-            }, 
+            },
             'at': {
                 'atMobiles': mobiles,
                 'isAtAll': False
@@ -497,7 +504,7 @@ class Notifier:
         # 发送钉钉群通知
         info = self._get_dingtalk_message(message_template, addr)
         self.send_dingtalk_message(self.upgrade_receiver[ConfigLabel.DINGTALK_FLAG], info)
-    
+
     # 通知运营人员在各大应用市场发布渠道包
     def notify_to_publish(self, addr_list, prd_desc):
         # 消息模板定义
@@ -525,6 +532,7 @@ class Notifier:
 
 class Manager:
     HEAD_NAME = 'HEAD'
+
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
         for name, value in vars(args).items():
@@ -550,7 +558,7 @@ class Manager:
             generator.process()
 
         # 上传渠道包、渠道压缩包至阿里云
-        uploader = Uploader(self.work_path, self.app_code, self.ver_name)
+        uploader = Uploader(self.work_path, self.app_code, self.ver_name, self.bucket_domain)
         if self.to_upload:
             uploader.process()
 
@@ -596,10 +604,13 @@ def get_args(src_args=None):
     # 是否上传到阿里云
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
                         help='indicate to upload channel files and zipped files')
-    
+
+    # 渠道包上传到阿里云的bucket时指定的对应域名
+    parser.add_argument('--bucket_domain', metavar='bucket_domain', dest='bucket_domain', type=str, help='the bucket domain when uploading channel packages.')
+
     # 是否进行发送官网升级包的操作
     parser.add_argument('--official', dest='to_update_official', action='store_true', default=False, help='indicate to update official apk')
-    
+
     # 是否发邮件通知给相关人员配置升级
     parser.add_argument('--notify', dest='to_notify', action='store_true', default=False,
                         help='indicate to notify relevant personnel to publish app in application market')
