@@ -57,6 +57,14 @@ pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https:/
 pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple bc_dock_util
 pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple  -U bc_dock_util
 pip3 install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple bc_dock_util==0.0.7
+
+使用指定阿里云镜像加速样例如下：
+pip install -i http://pypi.douban.com/simple/ numpy
+pip install -i http://pypi.douban.com/simple/ --trusted-host pypi.douban.com numpy #此参数“--trusted-host”表示信任，如果上一个提示不受信任，就使用这个
+
+pip install -i http://mirrors.aliyun.com/pypi/simple/ numpy
+pip install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com numpy
+python -m pip install -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com --upgrade pip
 """
 
 import argparse
