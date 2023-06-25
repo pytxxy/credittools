@@ -30,7 +30,14 @@
             //     "5.1.8",
             //     "D:\\auto_build\\release_apk"
             // ]
-            "args": []
+            "args": [
+                "http://gitlab.app.com",
+                "K7z3JhLnw8Ju5a9fKL9_",
+                "http://gitlab.txxy.com",
+                "K7z3JhLnw8Ju5a9fKL9_",
+                "F:\\temp\\git_root",
+                "--backup",
+            ]
         },
         {
             "name": "Python: Remote Attach",

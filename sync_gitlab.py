@@ -49,6 +49,8 @@ class ProcessManager:
             self.sync_project()
 
     def backup_project(self):
+        self.sync_single_project()
+        return
         src_items = self.get_projects_sync_item(self.src, self.src_token)
         other_info = dict()
         # cnt_butt = 4
@@ -80,6 +82,7 @@ class ProcessManager:
             code_url = v.ssh_url_to_repo
             self.checkout(prj_path, path, code_url)
             sync_git.Manager.sync_repo(prj_git_path)
+            # print(f'prj_path: {prj_path}, code_url: {code_url}')
 
             # cnt_index += 1
             # if cnt_index >= cnt_butt:
@@ -336,6 +339,23 @@ class ProcessManager:
         print(api_url)
         result = requests.get(api_url)
         print(result.json())
+
+    def sync_single_project(self):
+        path = 'TxxyAndroid.git'
+        path_with_namespace = 'Android/TxxyAndroid.git'
+        namespace = 'Android'
+        prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
+        prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
+        code_url = 'git@gitlab.app.com:Android/TxxyAndroid.git'
+        self.checkout(prj_path, path, code_url)
+        sync_git.Manager.sync_repo(prj_git_path)
+
+        dst_url = 'git@gitlab.txxy.com:Android/TxxyAndroid.git'
+        rtn = self.update_remote_url(prj_git_path, dst_url)
+        if not rtn:
+            print(f'update_remote_url({prj_git_path}, {dst_url}) failed!')
+
+        sync_git.Manager.push_to_remote(prj_git_path)
 
 def main(args):
     manager = ProcessManager(args)

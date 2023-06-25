@@ -2,6 +2,7 @@ import argparse
 import os
 import git
 import time
+import creditutils.exec_cmd as exec_cmd
 
 '''
 同步远程仓库代码到本地git仓库，包括所有分支信息。
@@ -125,6 +126,12 @@ class Manager:
         for item in local_map:
             if item not in remote_map:
                 repo.git.branch(item, D=True)
+
+        # 展示当前存在多少条tag
+        # i = 0
+        # for tag in repo.tags:
+        #     print(f'index({i}): {tag.name}')
+        #     i += 1
     
     @staticmethod
     def push_to_remote(repo_path):
@@ -146,6 +153,9 @@ class Manager:
         #         repo.git.push()
         
         repo.git.push(all=True)
+        
+        # 同步本地tag到远端
+        exec_cmd.run_cmd_with_system_in_specified_dir(repo_path, 'git push origin --tags', True)
 
     @staticmethod
     def _get_pure_name(whole_name):
