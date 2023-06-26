@@ -12,6 +12,7 @@ import creditutils.exec_cmd as exec_cmd
 import gitlab
 import creditutils.git_util as git_util
 import sync_git
+import traceback
 
 # 安装依赖：
 # GitPython          3.1.30(3.1.31版本会报错)
@@ -151,7 +152,10 @@ class ProcessManager:
                     other_info[k] = v
                     continue
 
-                sync_git.Manager.push_to_remote(prj_git_path)
+                try:
+                    sync_git.Manager.push_to_remote(prj_git_path)
+                except:
+                    print(f'sync_git.Manager.push_to_remote failed with {traceback.format_exc()}')
             else:
                 other_info[k] = v
 
