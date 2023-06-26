@@ -13,6 +13,10 @@ import gitlab
 import creditutils.git_util as git_util
 import sync_git
 
+# 安装依赖：
+# GitPython          3.1.30(3.1.31版本会报错)
+# python-gitlab      3.15.0
+
 # 设计思路说明：
 # 1.先遍历老的gitlab库，将所有的库罗列出来；
 # 2.依次对所有老库所有分支进行如下操作：
