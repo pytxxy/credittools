@@ -53,8 +53,8 @@ class ProcessManager:
             self.sync_project()
 
     def backup_project(self):
-        self.sync_single_project()
-        return
+        # self.sync_single_project()
+        # return
         src_items = self.get_projects_sync_item(self.src, self.src_token)
         other_info = dict()
         # cnt_butt = 4
