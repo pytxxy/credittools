@@ -87,7 +87,7 @@ class ProtectManager:
         c.setopt(pycurl.TIMEOUT, 300)
         c.setopt(pycurl.POST, 1)
         # 设置要访问的网址
-        c.setopt(pycurl.URL, 'http://{}:8000/{}'.format(self.ip, api))
+        c.setopt(pycurl.URL, 'http://{}:8000{}'.format(self.ip, api))
         # 设置请求header
         headers = [Flag.api_key + ':' + self.api_key,
                    Flag.sign + ':' + signature
@@ -327,7 +327,7 @@ def protect(ip, user_name, key, secret, file_path, dst_path=None):
 
 
 if __name__ == '__main__':
-    test_args = '-i 192.168.20.170 -u pyzx -k c2a6ca06-0989-4ff5-82cd-10494fcc53eb -s 52a3724f-f45f-429a-932f-229bad482f54 D:\\auto_build\\pytxxy\\output\\pro\\20200612_155500\\1.0.2-12-20200612.apk'.split()
+    test_args = '-i 192.168.20.171 -u pyzx -k a5070c3c-a22f-4ef3-8867-1577c9936c68 -s c6fbb982-343e-4c6c-8260-93c140b7c620 /data/android/auto_build/app/output/txxy/dev/20230706_095720/6.2.17beta_d_03-1041-20230706.apk'.split()
     # test_args = None
     in_args = get_args(test_args)
     util.measure_time(main, in_args)
