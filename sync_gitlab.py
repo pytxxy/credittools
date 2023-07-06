@@ -140,22 +140,22 @@ class ProcessManager:
                     namespace = path_with_namespace[0:-len(path)]
                     prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
 
-                prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
-                code_url = v.ssh_url_to_repo
-                self.checkout(prj_path, path, code_url)
-                sync_git.Manager.sync_repo(prj_git_path)
-
-                dst_item = dst_items[k]
-                dst_url = dst_item.ssh_url_to_repo
-                rtn = self.update_remote_url(prj_git_path, dst_url)
-                if not rtn:
-                    other_info[k] = v
-                    continue
-
                 try:
+                    prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
+                    code_url = v.ssh_url_to_repo
+                    self.checkout(prj_path, path, code_url)
+                    sync_git.Manager.sync_repo(prj_git_path)
+
+                    dst_item = dst_items[k]
+                    dst_url = dst_item.ssh_url_to_repo
+                    rtn = self.update_remote_url(prj_git_path, dst_url)
+                    if not rtn:
+                        other_info[k] = v
+                        continue
+
                     sync_git.Manager.push_to_remote(prj_git_path)
                 except:
-                    print(f'sync_git.Manager.push_to_remote failed with {traceback.format_exc()}')
+                    print(f'sync_project {dst_url} failed with {traceback.format_exc()}')
             else:
                 other_info[k] = v
 
