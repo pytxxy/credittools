@@ -87,7 +87,7 @@ class ProtectManager:
         c.setopt(pycurl.TIMEOUT, 300)
         c.setopt(pycurl.POST, 1)
         # 设置要访问的网址
-        c.setopt(pycurl.URL, 'http://{}:8000{}'.format(self.ip, api))
+        c.setopt(pycurl.URL, 'http://{}:8000/{}'.format(self.ip, api))
         # 设置请求header
         headers = [Flag.api_key + ':' + self.api_key,
                    Flag.sign + ':' + signature
