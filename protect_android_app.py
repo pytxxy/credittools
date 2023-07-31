@@ -272,7 +272,7 @@ def get_args(src_args=None):
     parser.add_argument('-u', '--username', action='store', dest='user_name', help='user name')
     parser.add_argument('-k', '--api_key', action='store', dest='api_key', help='api key')
     parser.add_argument('-s', '--api_secret', action='store', dest='api_secret', help='api secret')
-    parser.add_argument('-p', '--policy_id', action='store', dest='policy_id', default='1', help='policy id')
+    parser.add_argument('-p', '--policy_id', action='store', dest='policy_id', default='2', help='policy id')
     parser.add_argument('-d', '--download', action='store', dest='dst_path',
                         help='the path to store the downloading file')
     parser.add_argument('-c', '--channel_file', action='store', dest='channel_file', help='channel file')
