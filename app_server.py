@@ -150,6 +150,7 @@ class BuilderLabel:
     PASSWORD_FLAG = 'password'
     API_KEY_FLAG = 'api_key'
     API_SECRET_FLAG = 'api_secret'
+    POLICY_ID_FLAG = 'policy_id'
 
     IS_NEED_FLAG = 'is_need'
 
@@ -731,7 +732,8 @@ class BuildManager:
         user_name = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.USER_FLAG]
         api_key = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.API_KEY_FLAG]
         api_secret = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.API_SECRET_FLAG]
-        protected_path = protect_app.protect(ip, user_name, api_key, api_secret, self.apk_output_path)
+        policy_id = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.POLICY_ID_FLAG]
+        protected_path = protect_app.protect(ip, user_name, api_key, api_secret, policy_id, self.apk_output_path)
         if self.to_align:
             aligned_path = file_util.get_middle_path(protected_path)
             apk_util.zipalign(protected_path, aligned_path)
@@ -744,7 +746,7 @@ class BuildManager:
         storepass = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREPASS_FLAG]
         storealias = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREALIAS_FLAG]
         signed_path = apk_util.get_default_signed_path(protected_path)
-        rtn = apk_util.sign_apk(keystore, storepass,storealias, to_sign_path, signed_path)
+        rtn = apk_util.sign_apk(keystore, storepass, storealias, to_sign_path, signed_path)
         if rtn:
             str_info = 'Protect {} and sign success.'.format(self.apk_output_path)
             source_name = os.path.basename(signed_path)
