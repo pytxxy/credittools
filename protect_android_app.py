@@ -314,13 +314,13 @@ def main(args):
         sys.exit(1)
 
 
-def protect(ip, user_name, key, secret, file_path, dst_path=None):
+def protect(ip, user_name, key, secret, policy_id, file_path, dst_path=None):
     if dst_path:
         dst_path_info = ' -d {} '.format(dst_path)
     else:
         dst_path_info = ''
 
-    src_args = '-i {} -u {} -k {} -s {} {}{}'.format(ip, user_name, key, secret, dst_path_info, file_path)
+    src_args = '-i {} -u {} -k {} -s {} -p {} {}{}'.format(ip, user_name, key, secret, policy_id, dst_path_info, file_path)
     print(f'src_args: {src_args}')
     args = get_args(src_args.split())
     return main(args)
