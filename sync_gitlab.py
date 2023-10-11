@@ -349,21 +349,53 @@ class ProcessManager:
         print(result.json())
 
     def sync_single_project(self):
-        path = 'TxxyAndroid.git'
-        path_with_namespace = 'Android/TxxyAndroid.git'
-        namespace = 'Android'
-        prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
-        prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
-        code_url = 'git@gitlab.app.com:Android/TxxyAndroid.git'
-        self.checkout(prj_path, path, code_url)
-        sync_git.Manager.sync_repo(prj_git_path)
+        to_sync_array = [
+            {
+                'path': 'risk-decision-local.git', 
+                'path_with_namespace':'riskdecision/risk-decision-local.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn:riskdecision/risk-decision-local.git',
+                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/risk-decision-local.git'
+            },
+            {
+                'path': 'risk-admin.git', 
+                'path_with_namespace':'riskdecision/risk-admin.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn:riskdecision/risk-admin.git',
+                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/risk-admin.git'
+            },
+            {
+                'path': 'risk-decision-modules.git', 
+                'path_with_namespace':'riskdecision/risk-decision-modules.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn:riskdecision/risk-decision-modules.git',
+                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/risk-decision-modules.git'
+            },
+            {
+                'path': 'pycredit-boot.git', 
+                'path_with_namespace':'riskdecision/pycredit-boot.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn:riskdecision/pycredit-boot.git',
+                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/pycredit-boot.git'
+            },
+        ]
+        
+        for item in to_sync_array:
+            path = item['path']
+            path_with_namespace = item['path_with_namespace']
+            namespace = item['namespace']
+            prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
+            prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
+            code_url = item['code_url']
+            self.checkout(prj_path, path, code_url)
+            sync_git.Manager.sync_repo(prj_git_path)
 
-        dst_url = 'git@gitlab.txxy.com:Android/TxxyAndroid.git'
-        rtn = self.update_remote_url(prj_git_path, dst_url)
-        if not rtn:
-            print(f'update_remote_url({prj_git_path}, {dst_url}) failed!')
+            dst_url = item['dst_url']
+            rtn = self.update_remote_url(prj_git_path, dst_url)
+            if not rtn:
+                print(f'update_remote_url({prj_git_path}, {dst_url}) failed!')
 
-        sync_git.Manager.push_to_remote(prj_git_path)
+            sync_git.Manager.push_to_remote(prj_git_path)
 
 def main(args):
     manager = ProcessManager(args)

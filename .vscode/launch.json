@@ -31,12 +31,18 @@
             //     "D:\\auto_build\\release_apk"
             // ]
             "args": [
-                "http://gitlab.app.com",
-                "K7z3JhLnw8Ju5a9fKL9_",
-                "http://gitlab.txxy.com",
-                "glpat-9bvCJezS6dNhXBasieM_",
-                "F:\\temp\\git_root",
+                // "http://gitlab.app.com",
+                // "K7z3JhLnw8Ju5a9fKL9_",
+                // "http://gitlab.txxy.com",
+                // "glpat-9bvCJezS6dNhXBasieM_",
+                // "F:\\temp\\git_root",
                 // "--backup",
+                "http://gitlab.pycredit.cn",
+                "pMaFWJAHqrCsMgLBHiR5",
+                "http://gitlab.hnfhm.com",
+                "glpat-sZoysZ456XcWMY1DEQqJ",
+                "F:\\temp\\git_root",
+                "--backup",
             ]
         },
         {
