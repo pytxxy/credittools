@@ -352,45 +352,42 @@ class ProcessManager:
         to_sync_array = [
             {
                 'path': 'risk-decision-local.git', 
-                'path_with_namespace':'riskdecision/risk-decision-local.git', 
                 'namespace':'riskdecision',
-                'code_url':'git@gitlab.pycredit.cn:riskdecision/risk-decision-local.git',
-                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/risk-decision-local.git'
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
             },
             {
                 'path': 'risk-admin.git', 
-                'path_with_namespace':'riskdecision/risk-admin.git', 
                 'namespace':'riskdecision',
-                'code_url':'git@gitlab.pycredit.cn:riskdecision/risk-admin.git',
-                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/risk-admin.git'
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
             },
             {
                 'path': 'risk-decision-modules.git', 
-                'path_with_namespace':'riskdecision/risk-decision-modules.git', 
                 'namespace':'riskdecision',
-                'code_url':'git@gitlab.pycredit.cn:riskdecision/risk-decision-modules.git',
-                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/risk-decision-modules.git'
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
             },
             {
                 'path': 'pycredit-boot.git', 
-                'path_with_namespace':'riskdecision/pycredit-boot.git', 
                 'namespace':'riskdecision',
-                'code_url':'git@gitlab.pycredit.cn:riskdecision/pycredit-boot.git',
-                'dst_url': 'git@gitlab.hnfhm.com:riskdecision/pycredit-boot.git'
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
             },
         ]
         
         for item in to_sync_array:
             path = item['path']
-            path_with_namespace = item['path_with_namespace']
             namespace = item['namespace']
+            path_with_namespace = namespace + '/' + path
             prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
             prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
-            code_url = item['code_url']
+            code_url = item['code_url'] + ':' + path_with_namespace
             self.checkout(prj_path, path, code_url)
             sync_git.Manager.sync_repo(prj_git_path)
 
-            dst_url = item['dst_url']
+            dst_url = item['dst_url'] + ':' + path_with_namespace
+            # print(f' path: {path}\n namespace: {namespace}\n path_with_namespace: {path_with_namespace}\n code_url: {code_url}\n dst_url: {dst_url}\n')
             rtn = self.update_remote_url(prj_git_path, dst_url)
             if not rtn:
                 print(f'update_remote_url({prj_git_path}, {dst_url}) failed!')
