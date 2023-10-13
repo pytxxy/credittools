@@ -188,7 +188,7 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
-                     'coverage_enabled', 'httpdns', 'demo_label', 'is_include_arm32', 'splash_type', 'for_google', 'app_name', 'channel', 'minify_enabled']
+                     'coverage_enabled', 'httpdns', 'demo_label', 'is_include_arm32', 'splash_type', 'for_google', 'app_name', 'channel', 'minify_enabled', 'release_debuggable']
 
     extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
