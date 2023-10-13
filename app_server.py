@@ -180,6 +180,7 @@ class BuilderLabel:
     JPUSH_APPKEY_FLAG = 'jpush_appkey'
     MINIFY_ENABLED_FLAG = 'minify_enabled'
     UPLOAD_BUGLY_FLAG = 'upload_bugly'
+    RELEASE_DEBUGGABLE_FLAG = 'release_debuggable'
 
 
 class BuildCmd:
@@ -194,7 +195,7 @@ class BuildCmd:
     cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
         '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PPACKAGE_INCLUDE_ARM32={is_include_arm32} -PSPLASH_TYPE={splash_type} ' \
         '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
-        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled}'
+        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled} --PRELEASE_DEBUGGABLE={release_debuggable}'
 
     def __init__(self):
         # 先初始化默认值
@@ -214,6 +215,7 @@ class BuildCmd:
         self.jpush_appkey = None
         self.minify_enabled = str(False).lower()
         self.upload_bugly = str(False).lower()
+        self.release_debuggable = str(False).lower()
 
     def update_value(self, info):
         # 根据给过来的配置值，更新相应值
@@ -249,6 +251,7 @@ class BuildCmd:
         self.jpush_appkey = info[BuilderLabel.JPUSH_APPKEY_FLAG]
         self.minify_enabled = str(info[BuilderLabel.MINIFY_ENABLED_FLAG]).lower()
         self.upload_bugly = str(info[BuilderLabel.UPLOAD_BUGLY_FLAG]).lower()
+        self.release_debuggable = str(info[BuilderLabel.RELEASE_DEBUGGABLE_FLAG]).lower()
 
     def get_basic_map(self):
         rtn_map = {}
@@ -539,6 +542,7 @@ class BuildManager:
         params[BuilderLabel.JPUSH_APPKEY_FLAG] = self.jpush_appkey
         params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled
         params[BuilderLabel.UPLOAD_BUGLY_FLAG] = self.upload_bugly
+        params[BuilderLabel.RELEASE_DEBUGGABLE_FLAG] = self.release_debuggable
 
         # 获取网络api version配置信息
         if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:

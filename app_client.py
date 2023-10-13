@@ -10,6 +10,7 @@ import creditutils.trivial_util as trivial_util
 import creditutils.dingtalk_util as dingtalk_util
 from app_controller import CODE_FAILED, CODE_SUCCESS, DEFAULT_REQUEST_TIMEOUT
 
+
 class ConfigLabel:
     ROOT_FLAG = 'config'
     DINGTALK_FLAG = 'dingtalk'
@@ -17,6 +18,7 @@ class ConfigLabel:
     SECRET_FLAG = 'secret'
     AT_FLAG = 'at'
     MOBILE_FLAG = 'mobile'
+
 
 class ConfigParser:
     def __init__(self, config_path):
@@ -34,6 +36,7 @@ class ConfigParser:
         parser = ConfigParser(config_path)
         parser.parse()
         return parser.get_config()
+
 
 class Notifier:
     def __init__(self, work_path):
@@ -64,7 +67,7 @@ class Notifier:
                 mobiles.append(mobile_obj)
 
         data = {
-            'msgtype': 'markdown', 
+            'msgtype': 'markdown',
             'markdown': info,
             'at': {
                 'atMobiles': mobiles,
@@ -78,10 +81,11 @@ class Notifier:
     def notify_to_dingtalk(self, info):
         # 发送钉钉群通知
         self.send_dingtalk_message(self.dingtalk_receiver[ConfigLabel.DINGTALK_FLAG], info)
- 
+
 
 class BuilderLabel:
     DEFAULT_CHAN = 'pycredit'
+
 
 class AppClient:
     def __init__(self, args) -> None:
@@ -104,7 +108,7 @@ class AppClient:
         for ev in envs:
             for c in codes:
                 dt = dict(self.data)
-                dt['ver_env'] = ev                
+                dt['ver_env'] = ev
                 print(f'正在打{c}的{ev}环境的包...')
                 dt['app_code'] = c
                 if c in names.keys():
@@ -192,13 +196,13 @@ def get_args(src_args=None):
     parser.add_argument('--vername', metavar='ver_name', dest='ver_name', default='1.0.0', help='version name')
     parser.add_argument('--vercode', metavar='ver_code', dest='ver_code', type=int, default=0, help='version code')
     parser.add_argument('--verno', metavar='ver_no', dest='ver_no', type=int, default=0, help='version release number')
-    parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, default='test', choices=['dev', 'test', 'test2', 'pre', 'pregray', 'gray', 'pro'], 
+    parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, default='test', choices=['dev', 'test', 'test2', 'pre', 'pregray', 'gray', 'pro'],
                         help='dev: develop environment; test: test environment; test2: test2 environment; '
                              'pre: pre-release environment; pregray: pre-gray-release environment; '
                              'gray: gray-release environment;  pro: production environment;')
 
     parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', type=str, default='', help='network api version number')
-    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy', 'xycx', 'pyqx', 'pyzx', 'ljh'], 
+    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy', 'xycx', 'pyqx', 'pyzx', 'ljh'],
                         help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin; pyzx: peng yuan zheng xin; ljh: la jiao hong;')
     parser.add_argument('--appname', metavar='app_name', dest='app_name', default='@string/app_name', help='application name')
 
@@ -209,15 +213,16 @@ def get_args(src_args=None):
     parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
     parser.add_argument('--google', dest='for_google', action='store_true', default=False, help='indicate to build for google play')
     parser.add_argument('--channel', metavar='channel', dest='channel', type=str, default=BuilderLabel.DEFAULT_CHAN, help='application channel')
-    parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan', 'mall'], 
+    parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--jpush', metavar='jpush_appkey', dest='jpush_appkey', default=None, help='jpush app key')
     parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
     parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
     parser.add_argument('--upload_bugly', dest='upload_bugly', action='store_true', default=True, help='upload bugly symbol files, mapping.txt etc.')
+    parser.add_argument('--release_debuggable', dest='release_debuggable', action='store_true', default=False, help='release version can be debuggable or not')
 
-    #parser.print_help()
+    # parser.print_help()
     return parser.parse_args(src_args)
 
 
