@@ -164,6 +164,15 @@ class Manager:
             return str_array[-1]
         else:
             return None
+        
+    @staticmethod
+    def get_remote_urls(repo_path):
+        repo = git.Repo(repo_path)
+        remote_obj = repo.remote()
+        result_array = []
+        for item in remote_obj.urls():
+            result_array.append(item)
+        return result_array
 
 def main(args):
     manager = Manager(args)
