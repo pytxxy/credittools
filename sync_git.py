@@ -170,7 +170,7 @@ class Manager:
         repo = git.Repo(repo_path)
         remote_obj = repo.remote()
         result_array = []
-        for item in remote_obj.urls():
+        for item in remote_obj.urls:
             result_array.append(item)
         return result_array
 
