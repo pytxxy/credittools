@@ -217,7 +217,7 @@ class BuildCmd:
         self.minify_enabled = str(False).lower()
         self.upload_bugly = str(False).lower()
         self.release_debuggable = str(False).lower()
-        self.api_encrypt = str(True).lower()
+        self.api_encrypt = str(False).lower()
 
     def update_value(self, info):
         # 根据给过来的配置值，更新相应值
