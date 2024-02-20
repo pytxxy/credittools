@@ -181,6 +181,7 @@ class BuilderLabel:
     MINIFY_ENABLED_FLAG = 'minify_enabled'
     UPLOAD_BUGLY_FLAG = 'upload_bugly'
     RELEASE_DEBUGGABLE_FLAG = 'release_debuggable'
+    API_ENCRYPT_FLAG = 'api_encrypt'
 
 
 class BuildCmd:
@@ -188,14 +189,14 @@ class BuildCmd:
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
-                     'coverage_enabled', 'httpdns', 'demo_label', 'is_include_arm32', 'splash_type', 'for_google', 'app_name', 'channel', 'minify_enabled', 'release_debuggable']
+                     'coverage_enabled', 'httpdns', 'demo_label', 'is_include_arm32', 'splash_type', 'for_google', 'app_name', 'channel', 'minify_enabled', 'release_debuggable', 'api_encrypt']
 
     extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
     cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
         '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PPACKAGE_INCLUDE_ARM32={is_include_arm32} -PSPLASH_TYPE={splash_type} ' \
         '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
-        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled} -PRELEASE_DEBUGGABLE={release_debuggable}'
+        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled} -PRELEASE_DEBUGGABLE={release_debuggable} -PENCRYPT={api_encrypt} '
 
     def __init__(self):
         # 先初始化默认值
@@ -216,6 +217,7 @@ class BuildCmd:
         self.minify_enabled = str(False).lower()
         self.upload_bugly = str(False).lower()
         self.release_debuggable = str(False).lower()
+        self.api_encrypt = str(True).lower()
 
     def update_value(self, info):
         # 根据给过来的配置值，更新相应值
@@ -252,6 +254,7 @@ class BuildCmd:
         self.minify_enabled = str(info[BuilderLabel.MINIFY_ENABLED_FLAG]).lower()
         self.upload_bugly = str(info[BuilderLabel.UPLOAD_BUGLY_FLAG]).lower()
         self.release_debuggable = str(info[BuilderLabel.RELEASE_DEBUGGABLE_FLAG]).lower()
+        self.api_encrypt = str(info[BuilderLabel.API_ENCRYPT_FLAG]).lower()
 
     def get_basic_map(self):
         rtn_map = {}
@@ -543,6 +546,7 @@ class BuildManager:
         params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled
         params[BuilderLabel.UPLOAD_BUGLY_FLAG] = self.upload_bugly
         params[BuilderLabel.RELEASE_DEBUGGABLE_FLAG] = self.release_debuggable
+        params[BuilderLabel.API_ENCRYPT_FLAG] = self.api_encrypt
 
         # 获取网络api version配置信息
         if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:

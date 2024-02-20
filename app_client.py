@@ -221,6 +221,7 @@ def get_args(src_args=None):
     parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
     parser.add_argument('--upload_bugly', dest='upload_bugly', action='store_true', default=True, help='upload bugly symbol files, mapping.txt etc.')
     parser.add_argument('--release_debuggable', dest='release_debuggable', action='store_true', default=False, help='release version can be debuggable or not')
+    parser.add_argument('--api_encrypt', dest='api_encrypt', action='store_true', default=True, help='api need encrypted or not')
 
     # parser.print_help()
     return parser.parse_args(src_args)
