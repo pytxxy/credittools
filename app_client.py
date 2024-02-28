@@ -149,6 +149,7 @@ class AppClient:
                 tpl.format('转测', dt["ver_no"]),
                 tpl.format('渠道', self.channel),
                 tpl.format('混淆', ('是' if self.minify_enabled else '否')),
+                tpl.format('加密', ('是' if self.api_encrypt else '否')),
             ]
             if 'cost_time' in str(result):
                 notify_info.append(tpl.format('耗时', result["cost_time"]))
