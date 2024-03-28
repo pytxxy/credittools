@@ -193,7 +193,7 @@ class BuildCmd:
 
     extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
-    cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
+    cmd_format = exec_name + ' --no-daemon {action}{app_code}{build_type} -PENV={net_env} -PAPP_BASE_VERSION={ver_name} ' \
         '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PPACKAGE_INCLUDE_ARM32={is_include_arm32} -PSPLASH_TYPE={splash_type} ' \
         '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
         '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled} -PRELEASE_DEBUGGABLE={release_debuggable} -PENCRYPT={api_encrypt} '
@@ -231,7 +231,7 @@ class BuildCmd:
 
         # 网络环境配置
         ori_net_env = info[BuilderLabel.NET_ENV_FLAG]
-        self.net_env = info[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].capitalize()
+        self.net_env = info[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
 
         # 配置为Release还是Debug模式
         self.build_type = info[BuilderLabel.TYPE_FLAG].capitalize()
@@ -335,7 +335,7 @@ class ProjectBuilder:
         # 配置为Release还是Debug模式
         build_type = self.info[BuilderLabel.TYPE_FLAG]
 
-        relative_path = os.path.join(app_code + net_env.capitalize(), build_type)
+        relative_path = os.path.join(app_code, build_type)
         log_info(relative_path)
 
         return relative_path
@@ -722,8 +722,8 @@ class BuildManager:
                 build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
                 app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
                 ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
-                net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].title()
-                mapping_out_path = main_prj_path + f'/build/outputs/mapping/{app_code}{net_env}{build_type}/'
+                net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
+                mapping_out_path = main_prj_path + f'{os.sep}build{os.sep}outputs{os.sep}mapping{os.sep}{app_code}{build_type}{os.sep}'
                 mapping_file_name = os.path.join(mapping_out_path, 'mapping.txt')
                 mapping_zip_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
                 mapping_info_path = os.path.join(self.output_directory, mapping_zip_name)
