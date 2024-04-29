@@ -31,6 +31,7 @@ import creditutils.dingtalk_util as dingtalk_util
 '''
 
 APK_SUFFIX = '.apk'
+BUCKET_SEP = '/'
 
 
 class ConfigLabel:
@@ -38,6 +39,7 @@ class ConfigLabel:
     TARGET_PATH_FLAG = 'target_path'
     RELATIVE_FLAG = 'relative'
     CHANNEL_FLAG = 'channel'
+    DOWNLOAD_FLAG = 'download'
     ZIP_FLAG = 'zip'
 
     BUCKET_FLAG = 'bucket'
@@ -243,6 +245,11 @@ class Uploader:
     def process(self):
         self._upload_dir(ConfigLabel.CHANNEL_FLAG)
         self._upload_dir(ConfigLabel.ZIP_FLAG)
+        
+        # 将上传到服务器的渠道包同步到下载链接
+        self.sync_channel_to_download()
+        
+        # 上传官网包
         self.upload_official_file()
 
     def _get_src_path(self, tag):
@@ -304,6 +311,73 @@ class Uploader:
         # example: ossutil cp F:\apk\pyqx\1.0.6\channel_to_upload oss://txxyapk/pyqx/ -r -f
         # cmd_str = f'ossutil cp {} {} -r -f'
         cmd_str = f'ossutil cp {src_dir} {dst_path} -r -f'
+        cp = subprocess.run(cmd_str, check=True, shell=True)
+        if cp.returncode != 0:
+            raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
+        
+    def sync_channel_to_download(self):
+        # 将上传到服务器的渠道包同步到下载链接
+        src_bucket = self._get_bucket_path(ConfigLabel.CHANNEL_FLAG)
+        dst_bucket = self._get_bucket_path(ConfigLabel.DOWNLOAD_FLAG)
+        # print(f'src_bucket: {src_bucket}, dst_bucket: {dst_bucket}')
+        self.copy_bucket_file_from_channel_to_download(src_bucket, dst_bucket)
+
+    def copy_bucket_file_from_channel_to_download(self, src_bucket, dst_bucket):
+        if not src_bucket.endswith(BUCKET_SEP):
+            src_bucket = src_bucket + BUCKET_SEP
+
+        if not dst_bucket.endswith(BUCKET_SEP):
+            dst_bucket = dst_bucket + BUCKET_SEP
+
+        # 先遍历源bucket，提取apk结尾的文件
+        channel_list = self.list_bucket_apk_channel(src_bucket)
+        for channel_name in channel_list:
+            src_bucket_path = src_bucket + channel_name + APK_SUFFIX
+            dst_bucket_path = dst_bucket + channel_name + BUCKET_SEP + self.app_code + APK_SUFFIX
+            # print(f'src_bucket_path: {src_bucket_path}, dst_bucket_path: {dst_bucket_path}')
+            self.copy_bucket_file(src_bucket_path, dst_bucket_path)
+
+    def list_bucket_apk_channel(self, src_bucket):
+        # example: ossutil ls oss://txxyapk -s -d
+        # cmd_str = f'ossutil ls {} -s -d'
+        to_use_bucket = src_bucket
+        if not src_bucket.endswith(BUCKET_SEP):
+            to_use_bucket = src_bucket + BUCKET_SEP
+
+        cmd_str = f'ossutil ls {to_use_bucket} -s -d'
+        result = None
+        try:
+            # 获取转码存在问题，直接校验bytes数据str格式数据是否包含指定字符
+            # result = subprocess.check_output(cmd_str, shell=True, universal_newlines=True)
+            result = subprocess.check_output(cmd_str, shell=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f'cmd_str: {cmd_str}. returncode: {e.returncode}\n output: \n{e.output}!')
+        finally:
+            pass
+        
+        # 获取返回结果列表
+        output_list_str = result.decode('utf-8') 
+        src_ori_list = output_list_str.split('\n')
+        # 遍历每一行，并使用strip去除前后空格和换行符  
+        src_list = [line.strip() for line in src_ori_list if line.strip()]
+        channel_list = []
+        
+        for item in src_list:
+            if item.startswith(to_use_bucket):
+                if item.endswith(APK_SUFFIX):
+                    middle_list = item.split(BUCKET_SEP)
+                    file_name = middle_list[-1]
+                    channel_name = file_name[0:-len(APK_SUFFIX)]
+                    # print(f'{channel_name}')
+                    channel_list.append(channel_name)
+
+        # print(f'channel_list: \n{channel_list}')
+        return channel_list
+
+    def copy_bucket_file(self, src_bucket_path, dst_bucket_path):
+        # example: ossutil cp oss://txxyapk/vivo.apk oss://txxyapk/download/vivo/txxy.apk -f
+        # cmd_str = f'ossutil cp {} {} -f'
+        cmd_str = f'ossutil cp {src_bucket_path} {dst_bucket_path} -f'
         cp = subprocess.run(cmd_str, check=True, shell=True)
         if cp.returncode != 0:
             raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')

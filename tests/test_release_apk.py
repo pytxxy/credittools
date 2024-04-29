@@ -61,11 +61,50 @@ def test_notifier_run():
     notifier.notify_to_upgrade(addr)
     notifier.notify_to_publish(addr_list)
 
+def test_list_bucket_apk_channel_run():
+    work_path = r'F:\temp\release_apk'
+    domain = 'http://apk.hntxxy.com'
+    # app_code = 'txxy'
+    # ver_name = '6.3.10'
+    # src_bucket = 'oss://txxyapk'
+    app_code = 'xycx'
+    ver_name = '2.1.2'
+    src_bucket = 'oss://txxyapk/xycx/'
+    
+    print(f'work_path: {work_path}')
+    print(f'app_code: {app_code}')
+    print(f'ver_name: {ver_name}')
+    uploader = release_apk.Uploader(work_path, app_code, ver_name, domain)
+    uploader.list_bucket_apk_channel(src_bucket)
 
+def test_copy_bucket_file_from_channel_to_download_run():
+    work_path = r'F:\temp\release_apk'
+    domain = 'http://apk.hntxxy.com'
+
+    # app_code = 'txxy'
+    # ver_name = '6.3.10'
+    # src_bucket = 'oss://txxyapk'
+    # dst_bucket = 'oss://txxyapk/download'
+    app_code = 'xycx'
+    ver_name = '2.1.2'
+    src_bucket = 'oss://txxyapk/xycx'
+    dst_bucket = 'oss://txxyapk/xycx/download'
+
+    print(f'work_path: {work_path}')
+    print(f'app_code: {app_code}')
+    print(f'ver_name: {ver_name}')
+
+    uploader = release_apk.Uploader(work_path, app_code, ver_name, domain)
+    # uploader.sync_channel_to_download()
+    uploader.copy_bucket_file_from_channel_to_download(src_bucket, dst_bucket)
+    
 def test_main():
     # test_generator_run()
     # test_uploader_run()
-    test_notifier_run()
+    # test_notifier_run()
+    # test_list_bucket_apk_channel_run()
+    test_copy_bucket_file_from_channel_to_download_run()
+    pass
     
 
 if __name__ == "__main__":
