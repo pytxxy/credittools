@@ -1,5 +1,6 @@
-rpyc
-xmltodict
-pycurl
-creditutils
-requests
+rpyc==5.1.0
+xmltodict==0.12.0
+pycurl==7.44.1
+requests==2.31.0
+paramiko==3.4.0
+creditutils>=0.3.0
