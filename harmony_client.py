@@ -96,23 +96,24 @@ class AppClient:
 
         client = Client.new_client(self.req_name, self.req_passwd, self.req_url)
 
-        data = {
-            'mode':'module',
-            'product':'txxy',
-            'buildMode':'debug',
-            'env':'pre1',
-            'appBaseVersion':'1.0.0',
-            'appReleaseVersion':'02',
-            'appVersionCode':'1',
-            'apiVersion':'1.1',
-            'target':'assembleHap',
-            'branch':'develop',
-            'toUpdateCode':True,
-            'toNotify':False,
-            'toUploadBugly':False,
-            'toUploadSftp':True,
-            'withApiEncrypt':True,
-        }
+        # 请求数据样例
+        # data = {
+        #     'mode':'module',
+        #     'product':'txxy',
+        #     'buildMode':'debug',
+        #     'env':'pre1',
+        #     'appBaseVersion':'1.0.0',
+        #     'appReleaseVersion':'02',
+        #     'appVersionCode':'1',
+        #     'apiVersion':'1.1',
+        #     'target':'assembleHap',
+        #     'branch':'develop',
+        #     'toUpdateCode':True,
+        #     'toNotify':False,
+        #     'toUploadBugly':False,
+        #     'toUploadSftp':True,
+        #     'withApiEncrypt':True,
+        # }
         mode = 'module'
         target = 'assembleHap'
         if self.to_distribute:
@@ -142,10 +143,19 @@ class AppClient:
                     data['appReleaseVersion'] = f'{ver_no:02d}'
 
                 if app_code in ver_codes.keys():
-                    data['appVersionCode'] = ver_codes.get(app_code)
+                    data['appVersionCode'] = str(ver_codes.get(app_code))
                 
+                api_ver = ""
                 if api_vers is not None and app_code in api_vers.keys():
-                    data['api_ver'] = api_vers.get(app_code)
+                    api_ver = api_vers.get(app_code)
+                data['apiVersion'] = api_ver
+                data['branch'] = self.branch
+                data['toUpdateCode'] = self.to_update
+                data['toNotify'] = self.need_notify
+                data['toUploadBugly'] = self.to_upload_bugly
+                data['toUploadSftp'] = self.to_upload
+                data['withApiEncrypt'] = self.with_api_encrypt
+
                 thread = threading.Thread(target=self.check_call_builder, args=(client,data))
                 thread.start()
     def check_call_builder(client, data):
@@ -180,26 +190,14 @@ def get_args(src_args=None):
     parser.add_argument('--vernos', metavar='ver_nos', dest='ver_nos', type=str, help='version release number')
     parser.add_argument('--apivers', metavar='api_vers', dest='api_vers', type=str, help='network api version number')
 
-    parser.add_argument('--vername', metavar='ver_name', dest='ver_name', default='1.0.0', help='version name')
-    parser.add_argument('--vercode', metavar='ver_code', dest='ver_code', type=int, default=0, help='version code')
-    parser.add_argument('--verno', metavar='ver_no', dest='ver_no', type=int, default=0, help='version release number')
-    parser.add_argument('--verenv', metavar='ver_env', dest='ver_env', type=str, default='test', choices=['dev1', 'tst1', 'pre1', 'pregray', 'gray', 'pro'],
-                        help='dev1: develop environment; tst1: test environment; '
-                             'pre1: pre-release environment; pregray: pre-gray-release environment; '
-                             'gray: gray-release environment;  pro: production environment;')
-
-    parser.add_argument('--apiver', metavar='api_ver', dest='api_ver', type=str, default='', help='network api version number')
-    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy', 'xycx', 'pyqx', 'pyzx', 'ljh'],
-                        help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin; pyzx: peng yuan zheng xin; ljh: la jiao hong;')
-
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
     parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
     parser.add_argument('--distribute', dest='to_distribute', action='store_true', default=False, help='generate app to distribute')
     parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
-    parser.add_argument('--upload_bugly', dest='upload_bugly', action='store_true', default=True, help='upload bugly symbol files, mapping.txt etc.')
-    parser.add_argument('--api_encrypt', dest='api_encrypt', action='store_true', default=False, help='api need encrypted or not')
+    parser.add_argument('--upload_bugly', dest='to_upload_bugly', action='store_true', default=True, help='upload bugly symbol files, mapping.txt etc.')
+    parser.add_argument('--api_encrypt', dest='with_api_encrypt', action='store_true', default=False, help='api need encrypted or not')
 
     # parser.print_help()
     return parser.parse_args(src_args)
