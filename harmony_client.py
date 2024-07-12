@@ -82,7 +82,6 @@ class AppClient:
         for name, value in vars(args).items():
             setattr(self, name, value)
             self.data[name] = value
-
     # 处理打包，以环境优先，打各应用包
     def process(self):
         app_codes = self.app_codes.split(',')
@@ -158,7 +157,7 @@ class AppClient:
 
                 thread = threading.Thread(target=self.check_call_builder, args=(client,data))
                 thread.start()
-    def check_call_builder(client, data):
+    def check_call_builder(self, client, data):
         result = client.check_call_builder(data)
         print(f'call builder got result: {result}')
         return result
