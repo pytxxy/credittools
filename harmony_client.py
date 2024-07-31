@@ -118,6 +118,7 @@ class AppClient:
         if self.to_distribute:
             mode = 'project'
             target = 'assembleApp'
+       
         if self.is_debug:
             buildMode = 'debug'
         else:
@@ -177,7 +178,7 @@ def get_args(src_args=None):
     parser.add_argument('--req_name', metavar='req_name', dest='req_name', default='test', help='request name')
     parser.add_argument('--req_passwd', metavar='req_passwd', dest='req_passwd', default='Test', help='request password')
     parser.add_argument('--req_url', metavar='req_url', dest='req_url', default='http://192.168.20.214:9008/api/flow', help='request url')
-    parser.add_argument('--job_name', metavar='job_name', dest='job_name', default='android_app', help='job name')
+    parser.add_argument('--job_name', metavar='job_name', dest='job_name', default='harmony_app', help='job name')
     parser.add_argument('--job_url', metavar='job_url', dest='job_url', default='', help='job url')
     parser.add_argument('--job_build_name', metavar='job_build_name', dest='job_build_name', default='', help='job build display name')
     parser.add_argument('--job_build_url', metavar='job_build_url', dest='job_build_url', default='', help='job build url')
