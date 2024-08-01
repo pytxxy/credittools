@@ -156,6 +156,13 @@ class AppClient:
                 data['toUploadSftp'] = self.to_upload
                 data['withApiEncrypt'] = self.with_api_encrypt
 
+                jobInfo = []
+                jobInfo['job_name'] = self.job_name
+                jobInfo['job_url'] = self.job_url
+                jobInfo['job_build_name'] = self.job_build_name
+                jobInfo['job_build_url'] = self.job_build_url
+                data['jobInfo'] = json.dumps(jobInfo, ensure_ascii=False)
+
                 thread = threading.Thread(target=self.check_call_builder, args=(client,data))
                 thread.start()
     def check_call_builder(self, client, data):
