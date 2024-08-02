@@ -156,7 +156,7 @@ class AppClient:
                 data['toUploadSftp'] = self.to_upload
                 data['withApiEncrypt'] = self.with_api_encrypt
 
-                jobInfo = []
+                jobInfo = {}
                 jobInfo['jobName'] = self.job_name
                 jobInfo['jobUrl'] = self.job_url
                 jobInfo['jobBuildName'] = self.job_build_name
