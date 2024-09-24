@@ -145,7 +145,7 @@ class AppClient:
                 if app_code in ver_codes.keys():
                     data['appVersionCode'] = str(ver_codes.get(app_code))
                 
-                api_ver = ""
+                api_ver = ''
                 if api_vers is not None and app_code in api_vers.keys():
                     api_ver = api_vers.get(app_code)
                 data['apiVersion'] = api_ver
@@ -195,7 +195,7 @@ def get_args(src_args=None):
     parser.add_argument('--vernames', metavar='ver_names', dest='ver_names', type=str, help='version names')
     parser.add_argument('--vercodes', metavar='ver_codes', dest='ver_codes', type=str, help='version codes')
     parser.add_argument('--vernos', metavar='ver_nos', dest='ver_nos', type=str, help='version release number')
-    parser.add_argument('--apivers', metavar='api_vers', dest='api_vers', type=str, help='network api version number')
+    parser.add_argument('--apivers', metavar='api_vers', dest='api_vers', type=str, default=None, help='network api version number')
 
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
     parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
