@@ -149,6 +149,7 @@ class AppClient:
                 if api_vers is not None and app_code in api_vers.keys():
                     api_ver = api_vers.get(app_code)
                 data['apiVersion'] = api_ver
+                data['signing'] = self.signing
                 data['branch'] = self.branch
                 data['toUpdateCode'] = self.to_update
                 data['toNotify'] = self.need_notify
@@ -196,6 +197,8 @@ def get_args(src_args=None):
     parser.add_argument('--vercodes', metavar='ver_codes', dest='ver_codes', type=str, help='version codes')
     parser.add_argument('--vernos', metavar='ver_nos', dest='ver_nos', type=str, help='version release number')
     parser.add_argument('--apivers', metavar='api_vers', dest='api_vers', type=str, default=None, help='network api version number')
+    parser.add_argument('--signing', metavar='signing', dest='signing', type=str, default='', choices=['', 'debug', 'release'],
+                        help='specify packaging signature')
 
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
     parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
