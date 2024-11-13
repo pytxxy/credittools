@@ -95,6 +95,7 @@ class ReleaseClient:
         app_codes = self.app_codes.split(',')
         ver_names = json.loads(self.ver_names)
         client = Client.new_client(self.req_name, self.req_passwd, self.req_url)
+        threads = []
         for code in app_codes:
             app_code = code
             if code in ver_names.keys():
@@ -110,7 +111,11 @@ class ReleaseClient:
             data['productDesc'] = self.prd_desc
 
             thread = threading.Thread(target=self.check_call_release, args=(client,data))
+            threads.append(thread)
             thread.start()
+
+        for thread in threads:
+            thread.join()
     def check_call_release(self, client, data):
         result = client.check_call_release(data)
         print(f'call release got result: {result}')
