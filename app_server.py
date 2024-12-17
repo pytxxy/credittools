@@ -193,7 +193,7 @@ class BuildCmd:
 
     extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
-    cmd_format = exec_name + ' --no-daemon {action}{app_code}{build_type} -PENV={net_env} -PAPP_BASE_VERSION={ver_name} ' \
+    cmd_format = exec_name + ' {action}{app_code}{build_type} -PENV={net_env} -PAPP_BASE_VERSION={ver_name} ' \
         '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PPACKAGE_INCLUDE_ARM32={is_include_arm32} -PSPLASH_TYPE={splash_type} ' \
         '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
         '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled} -PRELEASE_DEBUGGABLE={release_debuggable} -PENCRYPT={api_encrypt} '
