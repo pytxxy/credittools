@@ -185,7 +185,7 @@ class BuilderLabel:
 
 
 class BuildCmd:
-    exec_name = f'gradlew{_system_suffix}'
+    exec_name = f'gradlew{_system_suffix} -Dgradle.user.home=/data/.gradle'
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
