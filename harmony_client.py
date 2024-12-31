@@ -179,7 +179,6 @@ def main(args):
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='update code if need, build if need.')
     parser.add_argument('-u', dest='to_update', action='store_true', default=False, help='indicate to get or update code firstly')
-    parser.add_argument('-b', dest='to_build', action='store_true', default=False, help='indicate to build')
     parser.add_argument('-d', dest='is_debug', action='store_true', default=False, help='indicate to build debug version')
 
     # 新增复合参数，用来做遍历
@@ -190,7 +189,6 @@ def get_args(src_args=None):
     parser.add_argument('--job_url', metavar='job_url', dest='job_url', default='', help='job url')
     parser.add_argument('--job_build_name', metavar='job_build_name', dest='job_build_name', default='', help='job build display name')
     parser.add_argument('--job_build_url', metavar='job_build_url', dest='job_build_url', default='', help='job build url')
-    parser.add_argument('--work_path', metavar='work_path', dest='work_path', default='/data/harmony/auto_build/app', help='working directory')
     parser.add_argument('--appcodes', metavar='app_codes', dest='app_codes', type=str, help='app codes such as txxy,xycx,pyqx,pyzx')
     parser.add_argument('--verenvs', metavar='ver_envs', dest='ver_envs', type=str, help='ver envs such as test,dev,pre,pregray,gray,prod')
     parser.add_argument('--vernames', metavar='ver_names', dest='ver_names', type=str, help='version names')
