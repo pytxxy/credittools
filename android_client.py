@@ -72,7 +72,7 @@ class Client:
         return client
     
     def check_call_builder(self, data):
-        url = '/harmony/build'
+        url = '/android/build'
         return self.post_for_body(url, data)
 
 
