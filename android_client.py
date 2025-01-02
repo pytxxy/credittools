@@ -100,30 +100,30 @@ class AppClient:
         client = Client.new_client(self.req_name, self.req_passwd, self.req_url)
 
         # 请求数据样例
-        data = {
-            'product':'txxy',
-            'buildMode':'debug',
-            'env':'pre1',
-            'appBaseVersion':'6.4.7',
-            'appReleaseVersion':'01',
-            'appVersionCode':'1224',
-            'apiVersion':'42.3',
-            'channel':'pycredit',
-            'branch':'develop',
-            'demoLabel':'normal',
-            'splashType':'0',
-            'isForTest':True,
-            'toAlign':True,
-            'toUpdateCode':True,
-            'toNotify':False,
-            'minifyEnabled':False,
-            'forGoogle':False,
-            'toUploadSftp':True,
-            'toUploadBugly':False,
-            'releaseDebuggable':False,
-            'withApiEncrypt':True,
-            'jobInfo':''
-        }
+        # data = {
+        #     'product':'txxy',
+        #     'buildMode':'debug',
+        #     'env':'pre1',
+        #     'appBaseVersion':'6.4.7',
+        #     'appReleaseVersion':'01',
+        #     'appVersionCode':'1224',
+        #     'apiVersion':'42.3',
+        #     'channel':'pycredit',
+        #     'branch':'develop',
+        #     'demoLabel':'normal',
+        #     'splashType':'0',
+        #     'isForTest':True,
+        #     'toAlign':True,
+        #     'toUpdateCode':True,
+        #     'toNotify':False,
+        #     'minifyEnabled':False,
+        #     'forGoogle':False,
+        #     'toUploadSftp':True,
+        #     'toUploadBugly':False,
+        #     'releaseDebuggable':False,
+        #     'withApiEncrypt':True,
+        #     'jobInfo':''
+        # }
        
         if self.is_debug:
             buildMode = 'debug'
