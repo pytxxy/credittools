@@ -130,6 +130,7 @@ class AppClient:
         else:
             buildMode = 'release'
 
+        threads = []
         for env in envs:
             for app_code in app_codes:
                 print(f'正在打{app_code}的{env}环境的包...')
@@ -176,7 +177,11 @@ class AppClient:
                 data['jobInfo'] = json.dumps(jobInfo, ensure_ascii=False)
 
                 thread = threading.Thread(target=self.check_call_builder, args=(client,data))
+                threads.append(thread)
                 thread.start()
+
+        for thread in threads:
+            thread.join()
     def check_call_builder(self, client, data):
         result = client.check_call_builder(data)
         print(f'call builder got result: {result}')
