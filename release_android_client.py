@@ -131,14 +131,14 @@ class ReleaseClient:
 
             if tag_code not in result:
                 is_success = False
-                print(f'call release failed with {result}')
+                print(f'call release({k}) failed with {result}')
                 continue
 
             if result[tag_code] == success_code_str:
-                print(f'call release success with {result}')
+                print(f'call release({k}) success with {result}')
             else:
                 is_success = False
-                print(f'call release failed with {result}')
+                print(f'call release({k}) failed with {result}')
 
         return is_success
     def check_call_release(self, client, data):
