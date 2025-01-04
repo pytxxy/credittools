@@ -1,3 +1,4 @@
+import sys
 import threading
 import json
 import requests
@@ -82,6 +83,8 @@ class AppClient:
         for name, value in vars(args).items():
             setattr(self, name, value)
             self.data[name] = value
+
+        self.results = {}
     # 处理打包，以环境优先，打各应用包
     def process(self):
         app_codes = self.app_codes.split(',')
@@ -171,13 +174,38 @@ class AppClient:
                 
         for thread in threads:
             thread.join()
+
+        tag_code = 'code'
+        success_code_str = '0'
+        is_success = True
+        for k in self.results:
+            result = self.results[k]
+            if result == None:
+                is_success = False
+                continue
+
+            if tag_code not in result:
+                is_success = False
+                print(f'call builder failed with {result}')
+                continue
+
+            if result[tag_code] == success_code_str:
+                print(f'call builder success with {result}')
+            else:
+                is_success = False
+                print(f'call builder failed with {result}')
+
+        return is_success
     def check_call_builder(self, client, data):
         result = client.check_call_builder(data)
-        print(f'call builder got result: {result}')
+        # print(f'call builder got result: {result}')
+        data_str = json.dumps(data, ensure_ascii=False)
+        self.results[data_str] = result
+
         return result
 
 def main(args):
-    AppClient(args).process()
+    return AppClient(args).process()
 
 
 # 对输入参数进行解析，设置相应参数
@@ -219,4 +247,6 @@ def get_args(src_args=None):
 if __name__ == '__main__':
     test_args = None
     args = get_args(test_args)
-    trivial_util.measure_time(main, args)
+    is_success = trivial_util.measure_time(main, args)
+    if not is_success:
+        sys.exit(1)

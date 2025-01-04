@@ -212,8 +212,8 @@ class AppClient:
     def check_call_builder(self, client, data):
         result = client.check_call_builder(data)
         # print(f'call builder got result: {result}')
-        json_str = json.dumps(result, ensure_ascii=False)
-        self.results[json_str] = result
+        data_str = json.dumps(data, ensure_ascii=False)
+        self.results[data_str] = result
 
         return result
 
