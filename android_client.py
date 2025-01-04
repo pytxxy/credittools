@@ -1,4 +1,4 @@
-import os
+import sys
 import threading
 import json
 import requests
@@ -207,18 +207,18 @@ class AppClient:
                 is_success = False
                 print(f'call builder failed with {result}')
 
-        if not is_success:
-            os._exit(1)
-
+        return is_success
+            
     def check_call_builder(self, client, data):
         result = client.check_call_builder(data)
         # print(f'call builder got result: {result}')
-        self.results[data] = result
+        json_str = json.dumps(result, ensure_ascii=False)
+        self.results[json_str] = result
 
         return result
 
 def main(args):
-    AppClient(args).process()
+    return AppClient(args).process()
 
 
 # 对输入参数进行解析，设置相应参数
@@ -264,4 +264,6 @@ def get_args(src_args=None):
 if __name__ == '__main__':
     test_args = None
     args = get_args(test_args)
-    trivial_util.measure_time(main, args)
+    is_success = trivial_util.measure_time(main, args)
+    if not is_success:
+        sys.exit(1)
