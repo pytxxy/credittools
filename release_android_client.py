@@ -3,13 +3,14 @@
 1.从ftp服务器上下载原始主包，参照配置文件中的渠道包列表，生成最终的渠道包文件（在生成渠道包过程中，检查当前磁盘上存在的历史渠道版本，只保留最近三次的。）。
 2.将生成的渠道包以及给运营上传应用市场的渠道包压缩包上传到阿里云，使用钉钉及邮件方式通知测试人员配置升级、通知运营同事上架应用市场；
 '''
+import sys
 import argparse
 import json
 import time
 import requests
 import threading
 
-import creditutils.trivial_util as util
+import creditutils.trivial_util as trivial_util
 
 
 '''
@@ -91,6 +92,8 @@ class ReleaseClient:
         for name, value in vars(args).items():
             setattr(self, name, value)
             self.data[name] = value
+
+        self.results = {}
     def process(self):
         app_codes = self.app_codes.split(',')
         ver_names = json.loads(self.ver_names)
@@ -116,13 +119,38 @@ class ReleaseClient:
 
         for thread in threads:
             thread.join()
+
+        tag_code = 'code'
+        success_code_str = '0'
+        is_success = True
+        for k in self.results:
+            result = self.results[k]
+            if result == None:
+                is_success = False
+                continue
+
+            if tag_code not in result:
+                is_success = False
+                print(f'call release failed with {result}')
+                continue
+
+            if result[tag_code] == success_code_str:
+                print(f'call release success with {result}')
+            else:
+                is_success = False
+                print(f'call release failed with {result}')
+
+        return is_success
     def check_call_release(self, client, data):
         result = client.check_call_release(data)
-        print(f'call release got result: {result}')
+        # print(f'call release got result: {result}')
+        data_str = json.dumps(data, ensure_ascii=False)
+        self.results[data_str] = result
+
         return result
 
 def main(args):
-    ReleaseClient(args).process()
+    return ReleaseClient(args).process()
 
 
 # 对输入参数进行解析，设置相应参数
@@ -163,4 +191,6 @@ def get_args(src_args=None):
 if __name__ == '__main__':
     test_args = None
     args = get_args(test_args)
-    util.measure_time(main, args)
+    is_success = trivial_util.measure_time(main, args)
+    if not is_success:
+        sys.exit(1)
