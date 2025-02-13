@@ -158,7 +158,7 @@ def get_args(src_args=None):
 
     parser.add_argument('--req_name', metavar='req_name', dest='req_name', default='test', help='request name')
     parser.add_argument('--req_passwd', metavar='req_passwd', dest='req_passwd', default='Test', help='request password')
-    parser.add_argument('--req_url', metavar='req_url', dest='req_url', default='http://192.168.20.214:9008/api/flow', help='request url')
+    parser.add_argument('--req_url', metavar='req_url', dest='req_url', default='http://192.168.20.118:9008/api/flow', help='request url')
 
 
     # 应用和版本信息多选及其配置
