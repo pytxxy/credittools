@@ -114,30 +114,35 @@ class ProcessManager:
 
             return
 
-        # 判断是否已经压缩过
-        is_compressed = ProcessManager.check_if_compressed(src_file, compressed_identify, old_compressed_identify)
-        if is_compressed:
-            if to_copy:
-                # 已经压缩过则复制到目标文件夹
-                shutil.copyfile(src_file, dst_file)
-                print("copy {} to {} success".format(src_file, dst_file))
-
-            return
+        if self.without_tag:
+            print(src_file, dst_file)
+            self.comp.compress_file(src_file, dst_file)
+            print('smart compress "{}" to "{}" success.'.format(src_file, dst_file))
         else:
-            # 如果只是标记是否压缩，则无须上传网络压缩(用于标记已经压缩但是没有打标记的文件)
-            if not tag_only:
-                print(src_file, dst_file)
-                self.comp.compress_file(src_file, dst_file)
-                print('smart compress "{}" to "{}" success.'.format(src_file, dst_file))
-            else:
-                shutil.copyfile(src_file, dst_file)
+            # 判断是否已经压缩过
+            is_compressed = ProcessManager.check_if_compressed(src_file, compressed_identify, old_compressed_identify)
+            if is_compressed:
+                if to_copy:
+                    # 已经压缩过则复制到目标文件夹
+                    shutil.copyfile(src_file, dst_file)
+                    print("copy {} to {} success".format(src_file, dst_file))
 
-            if os.path.isfile(dst_file):
-                # 为目标文件增加压缩标识
-                ProcessManager.add_compressed_flag(dst_file, compressed_identify)
-                print('add compressed flag to "{}" success.'.format(dst_file))
+                return
             else:
-                print('process "{}" to "{}" failed!'.format(src_file, dst_file))
+                # 如果只是标记是否压缩，则无须上传网络压缩(用于标记已经压缩但是没有打标记的文件)
+                if not tag_only:
+                    print(src_file, dst_file)
+                    self.comp.compress_file(src_file, dst_file)
+                    print('smart compress "{}" to "{}" success.'.format(src_file, dst_file))
+                else:
+                    shutil.copyfile(src_file, dst_file)
+
+                if os.path.isfile(dst_file):
+                    # 为目标文件增加压缩标识
+                    ProcessManager.add_compressed_flag(dst_file, compressed_identify)
+                    print('add compressed flag to "{}" success.'.format(dst_file))
+                else:
+                    print('process "{}" to "{}" failed!'.format(src_file, dst_file))
 
     # tag_only 标识是否只是纯粹加压缩标签
     def process_modify_func(self, src_file, compressed_identify, old_compressed_identify, tag_only=False):
@@ -254,6 +259,9 @@ def get_args(src_args=None):
 
     parser.add_argument('-o', dest='dst', metavar='dst', default=None,
                         help='target file or directory')
+
+    parser.add_argument('--notag', dest='without_tag', action='store_true', default=False,
+                        help='not to add compressed flag!')
 
     parser.add_argument('-a', dest='to_copy', action='store_true', default=False,
                         help='specify if to copy all files!')
