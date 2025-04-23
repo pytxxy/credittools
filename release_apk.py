@@ -5,11 +5,14 @@
 4.检查当前磁盘上存在的历史渠道版本，只保留最近三次的。
 '''
 import argparse
+import base64
+import datetime
 import os
-import time
+import string
 import subprocess
 import xmltodict
 import shutil
+import json
 
 import creditutils.file_util as file_util
 import creditutils.trivial_util as util
@@ -28,12 +31,15 @@ import creditutils.dingtalk_util as dingtalk_util
 '''
 
 APK_SUFFIX = '.apk'
+BUCKET_SEP = '/'
+
 
 class ConfigLabel:
     ROOT_FLAG = 'config'
     TARGET_PATH_FLAG = 'target_path'
     RELATIVE_FLAG = 'relative'
     CHANNEL_FLAG = 'channel'
+    DOWNLOAD_FLAG = 'download'
     ZIP_FLAG = 'zip'
 
     BUCKET_FLAG = 'bucket'
@@ -108,7 +114,7 @@ class Generator:
         self.apk_root_parent_path = os.path.join(self.work_path, target_path, self.app_code)
         self.apk_root_path = os.path.join(self.work_path, target_path, self.app_code, self.ver_name)
         self.apk_root_path = file_util.normalpath(self.apk_root_path)
-        
+
         channel_relative = self.common_config[ConfigLabel.RELATIVE_FLAG][ConfigLabel.CHANNEL_FLAG]
         self.apk_channel_path = os.path.join(self.apk_root_path, channel_relative)
         self.apk_channel_path = file_util.normalpath(self.apk_channel_path)
@@ -165,7 +171,7 @@ class Generator:
                     break
 
         return src_apk_path
-    
+
     def generate_channel_apk(self):
         src_apk_path = self._get_source_apk()
         if not src_apk_path:
@@ -174,16 +180,16 @@ class Generator:
         config_path_array = ['config', 'channel', self.app_code, 'target.txt']
         config_relative_path = os.sep.join(config_path_array)
         config_path = os.path.join(self.work_path, config_relative_path)
-        update_apk_channel.batch_update_channel(src_apk_path, self.apk_channel_path, config_path)
+        update_apk_channel.batch_update_channel(src_path=src_apk_path, dst_dir=self.apk_channel_path, config_file=config_path)
 
     def _download_single_exceptional_apk(self, channel):
         download_manager.download_sftp_file(self.sftp_config_path, self.apk_channel_path, self.ver_name, sftp_root_tag=self.app_code, channel=channel, as_file=False)
-    
+
     def download_exceptional_apk(self):
         config_path_array = ['config', 'channel', self.app_code, 'exception.txt']
         config_relative_path = os.sep.join(config_path_array)
         config_path = os.path.join(self.work_path, config_relative_path)
-        
+
         if os.path.isfile(config_path):
             parser = update_apk_channel.ConfigParser(config_path)
             parser.parse()
@@ -195,7 +201,6 @@ class Generator:
         app_version_digits = self.ver_name.replace('.', '')
         name_pre = f'{self.app_code}{app_version_digits}apk'
         return name_pre
-
 
     def zip_channel_apk(self):
         para_dict = dict()
@@ -214,12 +219,13 @@ class Generator:
 
 
 class Uploader:
-    def __init__(self, work_path, app_code, ver_name):
+    def __init__(self, work_path, app_code, ver_name, bucket_domain):
         self.work_path = os.path.abspath(work_path)
         self.app_code = app_code
         self.ver_name = ver_name
         self.common_config = None
         self.upload_config = None
+        self.bucket_domain = bucket_domain
 
         self._parse_base_config()
 
@@ -239,6 +245,11 @@ class Uploader:
     def process(self):
         self._upload_dir(ConfigLabel.CHANNEL_FLAG)
         self._upload_dir(ConfigLabel.ZIP_FLAG)
+        
+        # 将上传到服务器的渠道包同步到下载链接
+        self.sync_channel_to_download()
+        
+        # 上传官网包
         self.upload_official_file()
 
     def _get_src_path(self, tag):
@@ -255,7 +266,7 @@ class Uploader:
         filename = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
         file_path = os.path.join(channel_dir_path, filename)
         return file_path
-    
+
     def _get_official_target_file_name(self):
         src_name = self.upload_config[ConfigLabel.OFFICIAL_FLAG]
         pure_name = src_name
@@ -303,7 +314,74 @@ class Uploader:
         cp = subprocess.run(cmd_str, check=True, shell=True)
         if cp.returncode != 0:
             raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
-    
+        
+    def sync_channel_to_download(self):
+        # 将上传到服务器的渠道包同步到下载链接
+        src_bucket = self._get_bucket_path(ConfigLabel.CHANNEL_FLAG)
+        dst_bucket = self._get_bucket_path(ConfigLabel.DOWNLOAD_FLAG)
+        # print(f'src_bucket: {src_bucket}, dst_bucket: {dst_bucket}')
+        self.copy_bucket_file_from_channel_to_download(src_bucket, dst_bucket)
+
+    def copy_bucket_file_from_channel_to_download(self, src_bucket, dst_bucket):
+        if not src_bucket.endswith(BUCKET_SEP):
+            src_bucket = src_bucket + BUCKET_SEP
+
+        if not dst_bucket.endswith(BUCKET_SEP):
+            dst_bucket = dst_bucket + BUCKET_SEP
+
+        # 先遍历源bucket，提取apk结尾的文件
+        channel_list = self.list_bucket_apk_channel(src_bucket)
+        for channel_name in channel_list:
+            src_bucket_path = src_bucket + channel_name + APK_SUFFIX
+            dst_bucket_path = dst_bucket + channel_name + BUCKET_SEP + self.app_code + APK_SUFFIX
+            # print(f'src_bucket_path: {src_bucket_path}, dst_bucket_path: {dst_bucket_path}')
+            self.copy_bucket_file(src_bucket_path, dst_bucket_path)
+
+    def list_bucket_apk_channel(self, src_bucket):
+        # example: ossutil ls oss://txxyapk -s -d
+        # cmd_str = f'ossutil ls {} -s -d'
+        to_use_bucket = src_bucket
+        if not src_bucket.endswith(BUCKET_SEP):
+            to_use_bucket = src_bucket + BUCKET_SEP
+
+        cmd_str = f'ossutil ls {to_use_bucket} -s -d'
+        result = None
+        try:
+            # 获取转码存在问题，直接校验bytes数据str格式数据是否包含指定字符
+            # result = subprocess.check_output(cmd_str, shell=True, universal_newlines=True)
+            result = subprocess.check_output(cmd_str, shell=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f'cmd_str: {cmd_str}. returncode: {e.returncode}\n output: \n{e.output}!')
+        finally:
+            pass
+        
+        # 获取返回结果列表
+        output_list_str = result.decode('utf-8') 
+        src_ori_list = output_list_str.split('\n')
+        # 遍历每一行，并使用strip去除前后空格和换行符  
+        src_list = [line.strip() for line in src_ori_list if line.strip()]
+        channel_list = []
+        
+        for item in src_list:
+            if item.startswith(to_use_bucket):
+                if item.endswith(APK_SUFFIX):
+                    middle_list = item.split(BUCKET_SEP)
+                    file_name = middle_list[-1]
+                    channel_name = file_name[0:-len(APK_SUFFIX)]
+                    # print(f'{channel_name}')
+                    channel_list.append(channel_name)
+
+        # print(f'channel_list: \n{channel_list}')
+        return channel_list
+
+    def copy_bucket_file(self, src_bucket_path, dst_bucket_path):
+        # example: ossutil cp oss://txxyapk/vivo.apk oss://txxyapk/download/vivo/txxy.apk -f
+        # cmd_str = f'ossutil cp {} {} -f'
+        cmd_str = f'ossutil cp {src_bucket_path} {dst_bucket_path} -f'
+        cp = subprocess.run(cmd_str, check=True, shell=True)
+        if cp.returncode != 0:
+            raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
+
     # 单独上传一份官方包，便于配置升级
     def upload_official_file(self):
         apk_file_path = self._get_official_file_path()
@@ -321,12 +399,18 @@ class Uploader:
         if cp.returncode != 0:
             raise Exception(f'cmd_str: {cmd_str}. returncode: {cp.returncode}!')
 
+    def get_bucket_domain(self):
+        if self.bucket_domain is not None:
+            return self.bucket_domain
+        else:
+            return self.upload_config[ConfigLabel.DOMAIN_FLAG]
+
     def get_zip_uploaded_list(self):
         tag = ConfigLabel.ZIP_FLAG
         apk_tag_path = self._get_src_path(tag)
         bucket_path = self._get_bucket_path(tag)
         bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
-        domain = self.upload_config[ConfigLabel.DOMAIN_FLAG]
+        domain = self.get_bucket_domain()
         domain_path = bucket_path.replace(bucket, domain)
         result = list()
         file_list = os.listdir(apk_tag_path)
@@ -338,11 +422,11 @@ class Uploader:
                     result.append(domain_file_path)
 
         return result
-        
+
     def get_official_addr(self):
         bucket_path = self._get_official_bucket_path()
         bucket = self.upload_config[ConfigLabel.BUCKET_FLAG]
-        domain = self.upload_config[ConfigLabel.DOMAIN_FLAG]
+        domain = self.get_bucket_domain()
         domain_path = bucket_path.replace(bucket, domain)
         return domain_path
 
@@ -397,6 +481,30 @@ class Notifier:
         self._parse_base_config()
         self._init_sender()
 
+    def _fill_template_data(self, template, values):
+        tpl = string.Template(template)
+        return tpl.substitute(values)
+
+    def _get_mail_subject(self, template):
+        time_now = str(datetime.datetime.now())
+        time_now = time_now[:time_now.rindex('.')]
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        values = {'app_name': app_name, 'ver_name': self.ver_name, 'time_now': time_now}
+        return self._fill_template_data(template, values)
+
+    def _get_mail_content(self, template, addr, prd_desc):
+        # 产品需求开发描述
+        if prd_desc:
+            prd_desc = str(base64.b64decode(prd_desc), encoding='utf-8')
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        values = {'app_name': app_name, 'ver_name': self.ver_name, 'addr': addr, 'prd_desc': prd_desc}
+        return self._fill_template_data(template, values)
+
+    def _get_dingtalk_message(self, template, addr):
+        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
+        values = {'app_name': app_name, 'ver_name': self.ver_name, 'addr': addr}
+        return self._fill_template_data(template, values)
+
     def parse_receiver(self, config_data):
         if not config_data:
             raise Exception('config_data is empty!')
@@ -437,10 +545,10 @@ class Notifier:
                 mobiles.append(mobile_obj)
 
         data = {
-            'msgtype': 'text', 
+            'msgtype': 'text',
             'text': {
                 'content': info
-            }, 
+            },
             'at': {
                 'atMobiles': mobiles,
                 'isAtAll': False
@@ -449,46 +557,56 @@ class Notifier:
         rtn = dingtalk_util.send_map_data(webhook, secret, data)
         print(rtn.text)
 
-
     # 通知测试人员配置升级
-    def notify_to_upgrade(self, addr):
-        # 发送邮件通知
-        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
-        subject = f'{app_name} {self.ver_name}可以配置升级了'
-        content = f'''您好：
-          {app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请配置{app_name}的升级，apk包下载链接如下：
-        {addr}
-
+    def notify_to_upgrade(self, addr, prd_desc):
+        # 消息模板定义
+        subject_template = '''$app_name $ver_name可以配置升级了($time_now)'''
+        content_template = '''
+        您好，<br/>
+        <b>$app_name $ver_name </b>相关的渠道包已经上传到阿里云，请配置<b>$app_name</b>的升级。apk包下载链接如下：<br/>
+        $addr<br/>
+        $prd_desc<br/>
         '''
+        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云, 请配置$app_name的升级。apk包下载链接如下：\r\n$addr'''
+
+        # 发送邮件通知
+        subject = self._get_mail_subject(subject_template)
+        content = self._get_mail_content(content_template, addr, prd_desc)
         receivers, ccs = self.parse_receiver(self.upgrade_receiver[ConfigLabel.MAIL_FLAG])
-        self.sender.send_mail(subject, content, receivers, ccs=ccs)
+        self.sender.send_mail(subject, content, receivers, ccs=ccs, subtype='html')
 
         # 发送钉钉群通知
-        info = f'{app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请配置{app_name}的升级，apk包下载链接如下：{addr}'
+        info = self._get_dingtalk_message(message_template, addr)
         self.send_dingtalk_message(self.upgrade_receiver[ConfigLabel.DINGTALK_FLAG], info)
-    
-    # 通知运营人员在各大应用市场发布渠道包
-    def notify_to_publish(self, addr_list):
-        # 发送邮件通知
-        app_name = self.common_config[ConfigLabel.NAME_FLAG][self.app_code]
-        # target_list = map(lambda x: ' '*4 + x, addr_list)
-        target_str = '\r\n'.join(addr_list)
-        subject = f'{app_name} {self.ver_name}可以上传到应用市场了'
-        content = f'''您好：
-          {app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请在各应用市场上架{app_name}的新版本，apk渠道压缩包下载链接如下：
-        {target_str}
 
+    # 通知运营人员在各大应用市场发布渠道包
+    def notify_to_publish(self, addr_list, prd_desc):
+        # 消息模板定义
+        subject_template = '''$app_name $ver_name可以上传到应用市场了($time_now)'''
+        content_template = '''
+        您好，<br/>
+        <b>$app_name $ver_name </b>相关的渠道包已经上传到阿里云，请在各应用市场上架<b>$app_name</b>的新版本。apk渠道压缩包下载链接如下：<br/>
+        $addr<br/>
+        $prd_desc<br/>
         '''
+        message_template = '''$app_name $ver_name相关的渠道包已经上传到阿里云，请在各应用市场上架$app_name的新版本。apk渠道压缩包下载链接如下：\r\n$addr'''
+
+        # 发送邮件通知
+        addr = '<br/>'.join(addr_list)
+        subject = self._get_mail_subject(subject_template)
+        content = self._get_mail_content(content_template, addr, prd_desc)
         receivers, ccs = self.parse_receiver(self.publish_receiver[ConfigLabel.MAIL_FLAG])
-        self.sender.send_mail(subject, content, receivers, ccs=ccs)
+        self.sender.send_mail(subject, content, receivers, ccs=ccs, subtype='html')
 
         # 发送钉钉群通知
-        info = f'{app_name} {self.ver_name}相关的渠道包已经上传到阿里云，请在各应用市场上架{app_name}的新版本，apk渠道压缩包下载链接如下：{target_str}'
+        addr = '\r\n'.join(addr_list)
+        info = self._get_dingtalk_message(message_template, addr)
         self.send_dingtalk_message(self.publish_receiver[ConfigLabel.DINGTALK_FLAG], info)
 
 
 class Manager:
     HEAD_NAME = 'HEAD'
+
     def __init__(self, args):
         # 先将输入的控制参数全部存储为成员变量
         for name, value in vars(args).items():
@@ -497,6 +615,16 @@ class Manager:
 
         self.work_path = os.path.abspath(self.work_path)
 
+    def prepare(self):
+        codes = self.app_codes.split(',')
+        vnames = json.loads(self.ver_names)
+        for c in codes:
+            self.app_code = c
+            if c in vnames.keys():
+                self.ver_name = vnames.get(c)
+            print(f'正在打{c}({self.ver_name})的渠道包...')
+            self.process()
+
     def process(self):
         # 生成渠道包
         if self.to_generate:
@@ -504,7 +632,7 @@ class Manager:
             generator.process()
 
         # 上传渠道包、渠道压缩包至阿里云
-        uploader = Uploader(self.work_path, self.app_code, self.ver_name)
+        uploader = Uploader(self.work_path, self.app_code, self.ver_name, self.bucket_domain)
         if self.to_upload:
             uploader.process()
 
@@ -512,40 +640,51 @@ class Manager:
         notifier = Notifier(self.work_path, self.app_code, self.ver_name)
         if self.to_update_official:
             addr = uploader.get_official_addr()
-            notifier.notify_to_upgrade(addr)
+            notifier.notify_to_upgrade(addr, self.prd_desc)
 
         # 发邮件通知相关人员上架到各应用市场
         if self.to_notify:
             addr_list = uploader.get_zip_uploaded_list()
-            notifier.notify_to_publish(addr_list)
+            notifier.notify_to_publish(addr_list, self.prd_desc)
 
 
 def main(args):
     manager = Manager(args)
-    manager.process()
+    manager.prepare()
 
 
 # 对输入参数进行解析，设置相应参数
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='to release apk.')
-    # 版本名称，如5.1.2
-    parser.add_argument('ver_name', metavar='ver_name', help='version name')
+
     # 工作目录
     parser.add_argument('work_path', metavar='work_path', help='working directory')
 
-    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy',
-                        choices=['txxy', 'xycx', 'pyqx', 'pyzx'],
+    # 应用和版本信息多选及其配置
+    parser.add_argument('--vernames', metavar='ver_names', dest='ver_names', type=str, help='version names')
+    parser.add_argument('--appcodes', metavar='app_codes', dest='app_codes', type=str, help='app codes such as txxy,xycx,pyqx,pyzx')
+
+    # # 版本名称，如5.1.2
+    parser.add_argument('--ver_name', metavar='ver_name', default='1.0.0', help='version name')
+    parser.add_argument('--appcode', metavar='app_code', dest='app_code', type=str, default='txxy', choices=['txxy', 'xycx', 'pyqx', 'pyzx'],
                         help='txxy: tian xia xin yong; xycx: xin yong cha xun; pyqx: peng you qi xin; pyzx: peng yuan zheng xin;')
+
+    # 产品需求开发功能点描述
+    parser.add_argument('--prd_desc', metavar='prd_desc', dest='prd_desc', type=str, help='product requirements development description')
+
     # 是否进行生成渠道包的操作
     parser.add_argument('-g', dest='to_generate', action='store_true', default=False, help='indicate to generate channel apk')
 
     # 是否上传到阿里云
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False,
                         help='indicate to upload channel files and zipped files')
-    
+
+    # 渠道包上传到阿里云的bucket时指定的对应域名
+    parser.add_argument('--bucket_domain', metavar='bucket_domain', dest='bucket_domain', type=str, help='the bucket domain when uploading channel packages.')
+
     # 是否进行发送官网升级包的操作
     parser.add_argument('--official', dest='to_update_official', action='store_true', default=False, help='indicate to update official apk')
-    
+
     # 是否发邮件通知给相关人员配置升级
     parser.add_argument('--notify', dest='to_notify', action='store_true', default=False,
                         help='indicate to notify relevant personnel to publish app in application market')

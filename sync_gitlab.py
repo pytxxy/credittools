@@ -12,6 +12,11 @@ import creditutils.exec_cmd as exec_cmd
 import gitlab
 import creditutils.git_util as git_util
 import sync_git
+import traceback
+
+# 安装依赖：
+# GitPython          3.1.30(3.1.31版本会报错)
+# python-gitlab      3.15.0
 
 # 设计思路说明：
 # 1.先遍历老的gitlab库，将所有的库罗列出来；
@@ -49,6 +54,8 @@ class ProcessManager:
             self.sync_project()
 
     def backup_project(self):
+        # self.sync_single_project()
+        # return
         src_items = self.get_projects_sync_item(self.src, self.src_token)
         other_info = dict()
         # cnt_butt = 4
@@ -80,6 +87,7 @@ class ProcessManager:
             code_url = v.ssh_url_to_repo
             self.checkout(prj_path, path, code_url)
             sync_git.Manager.sync_repo(prj_git_path)
+            # print(f'prj_path: {prj_path}, code_url: {code_url}')
 
             # cnt_index += 1
             # if cnt_index >= cnt_butt:
@@ -132,19 +140,22 @@ class ProcessManager:
                     namespace = path_with_namespace[0:-len(path)]
                     prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
 
-                prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
-                code_url = v.ssh_url_to_repo
-                self.checkout(prj_path, path, code_url)
-                sync_git.Manager.sync_repo(prj_git_path)
+                try:
+                    prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
+                    code_url = v.ssh_url_to_repo
+                    self.checkout(prj_path, path, code_url)
+                    sync_git.Manager.sync_repo(prj_git_path)
 
-                dst_item = dst_items[k]
-                dst_url = dst_item.ssh_url_to_repo
-                rtn = self.update_remote_url(prj_git_path, dst_url)
-                if not rtn:
-                    other_info[k] = v
-                    continue
+                    dst_item = dst_items[k]
+                    dst_url = dst_item.ssh_url_to_repo
+                    rtn = self.update_remote_url(prj_git_path, dst_url)
+                    if not rtn:
+                        other_info[k] = v
+                        continue
 
-                sync_git.Manager.push_to_remote(prj_git_path)
+                    sync_git.Manager.push_to_remote(prj_git_path)
+                except:
+                    print(f'sync_project {dst_url} failed with {traceback.format_exc()}')
             else:
                 other_info[k] = v
 
@@ -336,6 +347,52 @@ class ProcessManager:
         print(api_url)
         result = requests.get(api_url)
         print(result.json())
+
+    def sync_single_project(self):
+        to_sync_array = [
+            {
+                'path': 'risk-decision-local.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
+            },
+            {
+                'path': 'risk-admin.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
+            },
+            {
+                'path': 'risk-decision-modules.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
+            },
+            {
+                'path': 'pycredit-boot.git', 
+                'namespace':'riskdecision',
+                'code_url':'git@gitlab.pycredit.cn',
+                'dst_url': 'git@gitlab.hnfhm.com'
+            },
+        ]
+        
+        for item in to_sync_array:
+            path = item['path']
+            namespace = item['namespace']
+            path_with_namespace = namespace + '/' + path
+            prj_path = file_util.normalpath(os.path.join(self.git_root, namespace))
+            prj_git_path = file_util.normalpath(os.path.join(self.git_root, path_with_namespace))
+            code_url = item['code_url'] + ':' + path_with_namespace
+            self.checkout(prj_path, path, code_url)
+            sync_git.Manager.sync_repo(prj_git_path)
+
+            dst_url = item['dst_url'] + ':' + path_with_namespace
+            # print(f' path: {path}\n namespace: {namespace}\n path_with_namespace: {path_with_namespace}\n code_url: {code_url}\n dst_url: {dst_url}\n')
+            rtn = self.update_remote_url(prj_git_path, dst_url)
+            if not rtn:
+                print(f'update_remote_url({prj_git_path}, {dst_url}) failed!')
+
+            sync_git.Manager.push_to_remote(prj_git_path)
 
 def main(args):
     manager = ProcessManager(args)

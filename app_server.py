@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import re
 import platform
@@ -12,6 +11,7 @@ import xmltodict
 import logging
 import datetime
 import threading
+import traceback
 
 import creditutils.apk_builder_util as apk_builder
 import creditutils.file_util as file_util
@@ -19,13 +19,15 @@ import creditutils.str_util as str_utils
 import creditutils.trivial_util as trivial_util
 import creditutils.git_util as git
 import creditutils.apk_util as apk_util
+import creditutils.zip_util as zip_util
 import protect_android_app as protect_app
 
-from typing import Tuple
+from typing import Dict
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
 from app_controller import DEFAULT_LISTEN_TIMEOUT, CODE_SUCCESS, CODE_FAILED
+from bugly_upload_symbol import BuglyManager
 
 
 '''
@@ -138,7 +140,8 @@ class BuilderLabel:
     TYPE_FLAG = 'type'
     FILE_ITEM_FLAG = 'file_item'
     GRADLE_FLAG = 'gradle'
-    ARM64_FLAG = 'arm64'
+    ARM32_FLAG = 'arm32'
+    SPLASH_TYPE_FLAG = 'splash_type'
     FOR_GOOGLE_FLAG = 'for_google'
 
     PROTECT_FLAG = 'protect'
@@ -147,6 +150,7 @@ class BuilderLabel:
     PASSWORD_FLAG = 'password'
     API_KEY_FLAG = 'api_key'
     API_SECRET_FLAG = 'api_secret'
+    POLICY_ID_FLAG = 'policy_id'
 
     IS_NEED_FLAG = 'is_need'
 
@@ -174,21 +178,25 @@ class BuilderLabel:
 
     CODE_VER_FLAG = 'code_ver'
     JPUSH_APPKEY_FLAG = 'jpush_appkey'
+    MINIFY_ENABLED_FLAG = 'minify_enabled'
+    UPLOAD_BUGLY_FLAG = 'upload_bugly'
+    RELEASE_DEBUGGABLE_FLAG = 'release_debuggable'
+    API_ENCRYPT_FLAG = 'api_encrypt'
 
 
 class BuildCmd:
-    exec_name = f'gradlew{_system_suffix}'
+    exec_name = f'gradlew{_system_suffix} -Dgradle.user.home=/data/.gradle'
     pre_cmd = exec_name + ' --configure-on-demand clean'
 
     basic_map_key = ['action', 'net_env', 'build_type', 'ver_name', 'ver_code', 'ver_no', 'app_code', 'for_publish',
-                     'coverage_enabled', 'httpdns', 'demo_label', 'is_arm64', 'for_google', 'app_name', 'channel']
+                     'coverage_enabled', 'httpdns', 'demo_label', 'is_include_arm32', 'splash_type', 'for_google', 'app_name', 'channel', 'minify_enabled', 'release_debuggable', 'api_encrypt']
 
     extend_map_key = {'API_VERSION': 'api_ver', 'JPUSH_APPKEY': 'jpush_appkey'}
 
-    cmd_format = exec_name + ' --no-daemon {action}{app_code}{net_env}{build_type} -PAPP_BASE_VERSION={ver_name} ' \
-        '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PBUILD_INCLUDE_ARM64={is_arm64} ' \
+    cmd_format = exec_name + ' {action}{app_code}{build_type} -PENV={net_env} -PAPP_BASE_VERSION={ver_name} ' \
+        '-PAPP_VERSION_CODE={ver_code} -PAPP_RELEASE_VERSION={ver_no} -PPACKAGE_INCLUDE_ARM32={is_include_arm32} -PSPLASH_TYPE={splash_type} ' \
         '-PBUILD_FOR_GOOGLE_PLAY={for_google} -PFOR_PUBLISH={for_publish} -PTEST_COVERAGE_ENABLED={coverage_enabled} ' \
-        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel}'
+        '-PHTTP_DNS_OPEN={httpdns} -PDEMO_LABEL={demo_label} -PCUSTOM_APP_NAME={app_name} -PDEFAULT_CHANNEL={channel} -PMINIFY_ENABLED={minify_enabled} -PRELEASE_DEBUGGABLE={release_debuggable} -PENCRYPT={api_encrypt} '
 
     def __init__(self):
         # 先初始化默认值
@@ -206,6 +214,10 @@ class BuildCmd:
         self.channel = BuilderLabel.DEFAULT_CHAN
         self.demo_label = 'normal'
         self.jpush_appkey = None
+        self.minify_enabled = str(False).lower()
+        self.upload_bugly = str(False).lower()
+        self.release_debuggable = str(False).lower()
+        self.api_encrypt = str(False).lower()
 
     def update_value(self, info):
         # 根据给过来的配置值，更新相应值
@@ -219,7 +231,7 @@ class BuildCmd:
 
         # 网络环境配置
         ori_net_env = info[BuilderLabel.NET_ENV_FLAG]
-        self.net_env = info[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env].capitalize()
+        self.net_env = info[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
 
         # 配置为Release还是Debug模式
         self.build_type = info[BuilderLabel.TYPE_FLAG].capitalize()
@@ -233,11 +245,16 @@ class BuildCmd:
         self.coverage_enabled = info[BuilderLabel.COVERAGE_FLAG][BuilderLabel.COMPILE_FLAG][env_mode].lower()
         self.httpdns = info[BuilderLabel.ENV_FLAG][BuilderLabel.HTTPDNS_FLAG][env_mode].lower()
         self.demo_label = info[BuilderLabel.DEMO_LABEL_FLAG]
-        self.is_arm64 = str(info[BuilderLabel.ARM64_FLAG]).lower()
+        self.is_include_arm32 = str(info[BuilderLabel.ARM32_FLAG]).lower()
+        self.splash_type = info[BuilderLabel.SPLASH_TYPE_FLAG]
         self.for_google = str(info[BuilderLabel.FOR_GOOGLE_FLAG]).lower()
         self.app_name = info[BuilderLabel.APP_NAME_FLAG]
         self.channel = info[BuilderLabel.CHANNEL_FLAG]
         self.jpush_appkey = info[BuilderLabel.JPUSH_APPKEY_FLAG]
+        self.minify_enabled = str(info[BuilderLabel.MINIFY_ENABLED_FLAG]).lower()
+        self.upload_bugly = str(info[BuilderLabel.UPLOAD_BUGLY_FLAG]).lower()
+        self.release_debuggable = str(info[BuilderLabel.RELEASE_DEBUGGABLE_FLAG]).lower()
+        self.api_encrypt = str(info[BuilderLabel.API_ENCRYPT_FLAG]).lower()
 
     def get_basic_map(self):
         rtn_map = {}
@@ -318,7 +335,7 @@ class ProjectBuilder:
         # 配置为Release还是Debug模式
         build_type = self.info[BuilderLabel.TYPE_FLAG]
 
-        relative_path = os.path.join(app_code + net_env.capitalize(), build_type)
+        relative_path = os.path.join(app_code, build_type)
         log_info(relative_path)
 
         return relative_path
@@ -522,9 +539,14 @@ class BuildManager:
         params[BuilderLabel.NET_ENV_FLAG] = self.ver_env
         params[BuilderLabel.ENV_MODE_FLAG] = self.ori_build_config[BuildConfigLabel.ENV_FLAG][BuildConfigLabel.MAP_FLAG][self.ver_env]
         self.env_mode = params[BuilderLabel.ENV_MODE_FLAG]
-        params[BuilderLabel.ARM64_FLAG] = self.is_arm64
+        params[BuilderLabel.ARM32_FLAG] = self.is_include_arm32
+        params[BuilderLabel.SPLASH_TYPE_FLAG] = self.splash_type
         params[BuilderLabel.FOR_GOOGLE_FLAG] = self.for_google
         params[BuilderLabel.JPUSH_APPKEY_FLAG] = self.jpush_appkey
+        params[BuilderLabel.MINIFY_ENABLED_FLAG] = self.minify_enabled
+        params[BuilderLabel.UPLOAD_BUGLY_FLAG] = self.upload_bugly
+        params[BuilderLabel.RELEASE_DEBUGGABLE_FLAG] = self.release_debuggable
+        params[BuilderLabel.API_ENCRYPT_FLAG] = self.api_encrypt
 
         # 获取网络api version配置信息
         if BuildConfigLabel.API_VER_FLAG in self.ori_build_config[BuildConfigLabel.ENV_FLAG]:
@@ -648,6 +670,8 @@ class BuildManager:
                 self._write_build_info()
                 # 生成apk描述信息
                 desc_data = self._generate_desc()
+                # 打包并上传bugly符号表文件
+                self._upload_bugly_symbol_files(main_prj_path)
 
                 target_name = os.path.basename(self.apk_output_path)
                 to_upload_path = os.path.dirname(self.apk_output_path)
@@ -691,12 +715,33 @@ class BuildManager:
         build_info_path = os.path.join(self.output_directory, readme_file_name)
         file_util.write_to_file(build_info_path, build_info, encoding='utf-8')
 
+    # 打包并上传符号表文件到bugly，前提是启用了代码混淆并且开启了上传到bugly的开关
+    def _upload_bugly_symbol_files(self, main_prj_path):
+        if self.minify_enabled and self.upload_bugly:
+            try:
+                build_type = self.pro_build_config[BuilderLabel.TYPE_FLAG].title()
+                app_code = self.pro_build_config[BuilderLabel.APP_CODE_FLAG]
+                ori_net_env = self.pro_build_config[BuilderLabel.NET_ENV_FLAG]
+                net_env = self.pro_build_config[BuilderLabel.ENV_FLAG][BuilderLabel.GRADLE_FLAG][ori_net_env]
+                mapping_out_path = main_prj_path + f'{os.sep}build{os.sep}outputs{os.sep}mapping{os.sep}{app_code}{build_type}{os.sep}'
+                mapping_file_name = os.path.join(mapping_out_path, 'mapping.txt')
+                mapping_zip_name = 'mapping-{}-{}.zip'.format(self.whole_ver_name, self.ver_code)
+                mapping_info_path = os.path.join(self.output_directory, mapping_zip_name)
+                file_items = file_util.get_child_files(mapping_out_path)
+                log_info('zip mapping files into {}.'.format(mapping_info_path))
+                zip_util.zip_files(file_items, mapping_info_path, mapping_out_path, True)
+                log_info('upload bugly symbol ... ver_env:{}, app_code:{}, app_version:{}, mapping_file:{}'.format(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name))
+                BuglyManager(self.work_path).uploadSymbol(net_env.lower(), app_code, self.whole_ver_name, mapping_file_name)
+            except Exception:
+                log_error('upload bugly symbol files error.')
+
     def _protect_file(self, main_prj_path):
         ip = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.IP_FLAG]
         user_name = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.USER_FLAG]
         api_key = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.API_KEY_FLAG]
         api_secret = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.API_SECRET_FLAG]
-        protected_path = protect_app.protect(ip, user_name, api_key, api_secret, self.apk_output_path)
+        policy_id = self.pro_build_config[BuilderLabel.PROTECT_FLAG][BuilderLabel.POLICY_ID_FLAG]
+        protected_path = protect_app.protect(ip, user_name, api_key, api_secret, policy_id, self.apk_output_path)
         if self.to_align:
             aligned_path = file_util.get_middle_path(protected_path)
             apk_util.zipalign(protected_path, aligned_path)
@@ -709,7 +754,7 @@ class BuildManager:
         storepass = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREPASS_FLAG]
         storealias = self.pro_build_config[BuilderLabel.SIGNER_FLAG][BuilderLabel.STOREALIAS_FLAG]
         signed_path = apk_util.get_default_signed_path(protected_path)
-        rtn = apk_util.sign_apk(keystore, storepass,storealias, to_sign_path, signed_path)
+        rtn = apk_util.sign_apk(keystore, storepass, storealias, to_sign_path, signed_path)
         if rtn:
             str_info = 'Protect {} and sign success.'.format(self.apk_output_path)
             source_name = os.path.basename(signed_path)
@@ -751,7 +796,7 @@ class AppService(Service):
         super().__init__()
         log_info(f'{self.get_service_name().lower()} init success.')
 
-    def exposed_compile(self, data) -> Tuple[int, str]:
+    def exposed_compile(self, data) -> Dict:
         '''
         编译完成后输出结果
         :param data: 编译参数
@@ -759,17 +804,16 @@ class AppService(Service):
         '''
         try:
             log_info(str(data))
-            log_info(f'type(data): {type(data)}')
             manager = BuildManager(data, _input_args['work_path'])
             manager.process()
-            # time.sleep(150)
+            # time.sleep(30)
             code = CODE_SUCCESS
             msg = 'success'
         except:
             code = CODE_FAILED
-            msg = f'errors in app_server: {sys.exc_info()}'
+            msg = f'errors in app_server: {traceback.format_exc()}'
 
-        return code, msg
+        return {'code': code, 'msg': msg}
 
 
 def start_server():
@@ -790,10 +834,10 @@ def main(args):
 def get_args(src_args=None):
     parser = argparse.ArgumentParser(description='config log dir and work path')
     parser.add_argument('-ld', dest='log_dir', help='dir which logs stores in', default='/data/log/app_server')
-    parser.add_argument('-wp', dest='work_path', help='work path which package app', default='/data/android/auto_build/app')
+    parser.add_argument('-wp', dest='work_path', help='work path which package app', default='D:/svn/public/build_script/android/app')
     parser.add_argument('-sh', dest='server_host', help='local server host name', default=None)
     parser.add_argument('-sp', dest='server_port', help='local server port', default=9998)
-    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='255.255.255.255')
+    parser.add_argument('-rh', dest='registry_host', help='host which rpyc_registry.py is running', default='192.168.20.214')
     parser.add_argument('-rp', dest='registry_port', help='port which rpyc_registry.py is running', default=REGISTRY_PORT)
     return parser.parse_args(src_args)
 

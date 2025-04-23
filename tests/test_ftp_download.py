@@ -36,6 +36,11 @@ def test_download_apk_with_other_channel():
     local_dir_path='/data/temp/apk/5.1.8/google'
     ver_name = '5.1.8'
     channel='google'
+    # 增加windows下的验证参数
+    # ftp_config_path = r'E:\repository\app\public\build_script\android\release_apk\config\sftp_config.xml'
+    # local_dir_path=r'F:\temp\apk'
+    # ver_name = '6.2.22'
+    # channel='yingyb'
     
     print(f'ftp_config_path: {ftp_config_path}')
     print(f'local_dir_path: {local_dir_path}')

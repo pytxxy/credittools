@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Python: Current File (Integrated Terminal)",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
@@ -22,21 +22,39 @@
             // "args": [
             //     "D:\\repository\\TxxyAndroid"
             // ]
+            // "args": [
+            //     "-g",
+            //     "--upload",
+            //     "--official",
+            //     "--notify",
+            //     "5.1.8",
+            //     "D:\\auto_build\\release_apk"
+            // ]
             "args": [
-                "-g",
-                "--upload",
-                "--official",
-                "--notify",
-                "5.1.8",
-                "D:\\auto_build\\release_apk"
+                // "http://gitlab.app.com",
+                // "K7z3JhLnw8Ju5a9fKL9_",
+                // "http://gitlab.txxy.com",
+                // "glpat-9bvCJezS6dNhXBasieM_",
+                // "F:\\temp\\git_root",
+                // "--backup",
+                // "http://gitlab.pycredit.cn",
+                // "pMaFWJAHqrCsMgLBHiR5",
+                // "http://gitlab.hnfhm.com",
+                // "glpat-sZoysZ456XcWMY1DEQqJ",
+                // "F:\\temp\\git_root",
+                // "--backup",
+                "http://gitlab.txxy.com",
+                "glpat-9bvCJezS6dNhXBasieM_",
+                "http://10.196.5.68",
+                "glpat-9bvCJezS6dNhXBasieM_",
+                "F:\\temp\\git_root",
+                "--backup",
             ]
         },
         {
             "name": "Python: Remote Attach",
-            "type": "python",
+            "type": "debugpy",
             "request": "attach",
-            "port": 5678,
-            "host": "localhost",
             "pathMappings": [
                 {
                     "localRoot": "${workspaceFolder}",
@@ -46,14 +64,14 @@
         },
         {
             "name": "Python: Module",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "enter-your-module-name-here",
             "console": "integratedTerminal"
         },
         {
             "name": "Python: Django",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/manage.py",
             "console": "integratedTerminal",
@@ -66,7 +84,7 @@
         },
         {
             "name": "Python: Flask",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "module": "flask",
             "env": {
@@ -81,7 +99,7 @@
         },
         {
             "name": "Python: Current File (External Terminal)",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "externalTerminal"

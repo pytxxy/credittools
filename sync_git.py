@@ -2,6 +2,7 @@ import argparse
 import os
 import git
 import time
+import creditutils.exec_cmd as exec_cmd
 
 '''
 同步远程仓库代码到本地git仓库，包括所有分支信息。
@@ -101,12 +102,11 @@ class Manager:
             if k != Manager.HEAD_NAME:
                 if k in local_map:
                     try:
+                        repo.git.reset(Manager.HEAD_NAME, hard=True)
                         if k == repo.active_branch.name:
-                            repo.git.reset(remote_map[k].name, hard=True)
                             repo.git.pull()
                         else:
                             repo.git.checkout(k)
-                            repo.git.reset(remote_map[k].name, hard=True)
                             repo.git.pull()
                     except git.exc.GitCommandError as e:
                         # 在pull同步出错的条件下，先将当前工作区切换到其他分支，再删除当前分支，然后重新从服务器拉取该分支
@@ -126,6 +126,12 @@ class Manager:
         for item in local_map:
             if item not in remote_map:
                 repo.git.branch(item, D=True)
+
+        # 展示当前存在多少条tag
+        # i = 0
+        # for tag in repo.tags:
+        #     print(f'index({i}): {tag.name}')
+        #     i += 1
     
     @staticmethod
     def push_to_remote(repo_path):
@@ -147,6 +153,9 @@ class Manager:
         #         repo.git.push()
         
         repo.git.push(all=True)
+        
+        # 同步本地tag到远端
+        exec_cmd.run_cmd_with_system_in_specified_dir(repo_path, 'git push origin --tags', True)
 
     @staticmethod
     def _get_pure_name(whole_name):
@@ -155,6 +164,15 @@ class Manager:
             return str_array[-1]
         else:
             return None
+        
+    @staticmethod
+    def get_remote_urls(repo_path):
+        repo = git.Repo(repo_path)
+        remote_obj = repo.remote()
+        result_array = []
+        for item in remote_obj.urls:
+            result_array.append(item)
+        return result_array
 
 def main(args):
     manager = Manager(args)

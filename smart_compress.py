@@ -8,14 +8,13 @@ Created on 2016年10月21日
 因为每一个key有压缩数据限制(免费版key支持500个)，所以如果要大批量进行图片压缩，需要自己先搞定key的问题；
 
 功能验证列表：
-1.先验证整体拷贝和非整体拷贝功能是否正常；(E:\temp\cloud_res\mini_src_01)
-2.验证网上压缩功能是否正常；(E:\temp\cloud_res\mini_src_01)
-3.验证拷贝只打标签功能是否正常；(E:\temp\cloud_res\mini_src_02)
-4.验证本地更新功能是否正常；(E:\temp\cloud_res\mini_src_03)
-5.验证本地只打标签功能是否正常；(E:\temp\cloud_res\mini_src_04)
+1.先验证整体拷贝和非整体拷贝功能是否正常；(E:\\temp\\cloud_res\\mini_src_01)
+2.验证网上压缩功能是否正常；(E:\\temp\\cloud_res\\mini_src_01)
+3.验证拷贝只打标签功能是否正常；(E:\\temp\\cloud_res\\mini_src_02)
+4.验证本地更新功能是否正常；(E:\\temp\\cloud_res\\mini_src_03)
+5.验证本地只打标签功能是否正常；(E:\\temp\\cloud_res\\mini_src_04)
 
 '''
-
 import tinify
 import argparse
 import os
@@ -25,14 +24,9 @@ import shutil
 import piexif
 import traceback
 import sys
-import imghdr
 import tempfile
 import creditutils.png_util as png_util
-
-
-class ImageType:
-    png = 'png'
-    jpeg = 'jpeg'
+from creditutils.img_util import detect_image_type, ImageType
 
 
 class Compression:
@@ -120,30 +114,35 @@ class ProcessManager:
 
             return
 
-        # 判断是否已经压缩过
-        is_compressed = ProcessManager.check_if_compressed(src_file, compressed_identify, old_compressed_identify)
-        if is_compressed:
-            if to_copy:
-                # 已经压缩过则复制到目标文件夹
-                shutil.copyfile(src_file, dst_file)
-                print("copy {} to {} success".format(src_file, dst_file))
-
-            return
+        if self.without_tag:
+            print(src_file, dst_file)
+            self.comp.compress_file(src_file, dst_file)
+            print('smart compress "{}" to "{}" success.'.format(src_file, dst_file))
         else:
-            # 如果只是标记是否压缩，则无须上传网络压缩(用于标记已经压缩但是没有打标记的文件)
-            if not tag_only:
-                print(src_file, dst_file)
-                self.comp.compress_file(src_file, dst_file)
-                print('smart compress "{}" to "{}" success.'.format(src_file, dst_file))
-            else:
-                shutil.copyfile(src_file, dst_file)
+            # 判断是否已经压缩过
+            is_compressed = ProcessManager.check_if_compressed(src_file, compressed_identify, old_compressed_identify)
+            if is_compressed:
+                if to_copy:
+                    # 已经压缩过则复制到目标文件夹
+                    shutil.copyfile(src_file, dst_file)
+                    print("copy {} to {} success".format(src_file, dst_file))
 
-            if os.path.isfile(dst_file):
-                # 为目标文件增加压缩标识
-                ProcessManager.add_compressed_flag(dst_file, compressed_identify)
-                print('add compressed flag to "{}" success.'.format(dst_file))
+                return
             else:
-                print('process "{}" to "{}" failed!'.format(src_file, dst_file))
+                # 如果只是标记是否压缩，则无须上传网络压缩(用于标记已经压缩但是没有打标记的文件)
+                if not tag_only:
+                    print(src_file, dst_file)
+                    self.comp.compress_file(src_file, dst_file)
+                    print('smart compress "{}" to "{}" success.'.format(src_file, dst_file))
+                else:
+                    shutil.copyfile(src_file, dst_file)
+
+                if os.path.isfile(dst_file):
+                    # 为目标文件增加压缩标识
+                    ProcessManager.add_compressed_flag(dst_file, compressed_identify)
+                    print('add compressed flag to "{}" success.'.format(dst_file))
+                else:
+                    print('process "{}" to "{}" failed!'.format(src_file, dst_file))
 
     # tag_only 标识是否只是纯粹加压缩标签
     def process_modify_func(self, src_file, compressed_identify, old_compressed_identify, tag_only=False):
@@ -193,10 +192,10 @@ class ProcessManager:
     # 给图片文件增加压缩标识
     @staticmethod
     def add_compressed_flag(src_path, compressed_identify):
-        img_type = imghdr.what(src_path)
-        if ImageType.jpeg == img_type:
+        img_type = detect_image_type(src_path)
+        if ImageType.JPEG == img_type:
             ProcessManager.add_compressed_flag_to_jpeg_file(src_path, compressed_identify)
-        elif ImageType.png == img_type:
+        elif ImageType.PNG == img_type:
             ProcessManager.add_compressed_flag_to_png_file(src_path, compressed_identify)
 
     # 检测png 文件是否包含压缩标识
@@ -236,14 +235,13 @@ class ProcessManager:
     # 检查文件是否含有压缩标识
     @staticmethod
     def check_if_compressed(file_path, compressed_identify, old_compressed_identify):
-        img_type = imghdr.what(file_path)
-        if ImageType.png == img_type:
+        img_type = detect_image_type(file_path)
+        if ImageType.PNG == img_type:
             return ProcessManager.check_if_png_compressed(file_path, compressed_identify, old_compressed_identify)
-        elif ImageType.jpeg == img_type:
+        elif ImageType.JPEG == img_type:
             return ProcessManager.check_if_jpeg_compressed(file_path, compressed_identify, old_compressed_identify)
 
         return False
-
 
 def main(args):
     manager = ProcessManager(args)
@@ -261,6 +259,9 @@ def get_args(src_args=None):
 
     parser.add_argument('-o', dest='dst', metavar='dst', default=None,
                         help='target file or directory')
+
+    parser.add_argument('--notag', dest='without_tag', action='store_true', default=False,
+                        help='not to add compressed flag!')
 
     parser.add_argument('-a', dest='to_copy', action='store_true', default=False,
                         help='specify if to copy all files!')

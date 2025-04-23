@@ -1,13 +1,14 @@
-import sys
 import math
 import time
 import argparse
 import threading
+import traceback
 import rpyc
+import creditutils.str_util as str_utils
 import creditutils.trivial_util as trivial_util
 from threading import Event
 from queue import Queue
-from typing import Tuple
+from typing import Dict
 from rpyc import Service
 from rpyc.utils.server import ThreadedServer
 from rpyc.utils.registry import UDPRegistryClient, REGISTRY_PORT
@@ -142,6 +143,8 @@ class Consumer:
         param = node[Flag.data]
         host, port = self.get_server_host_ip(item)
         conn = None
+        result = {}
+        begin = time.time()
         try:
             conn = rpyc.connect(host, port, config={'sync_request_timeout': DEFAULT_REQUEST_TIMEOUT})
             service_name = conn.root.get_service_name().lower()
@@ -150,26 +153,21 @@ class Consumer:
             trivial_util.print_t(f'{service_name} on {item} compile completed.')
             self.time_record[item] = None
         except:
-            result = (CODE_FAILED, f'errors in app_controller: {sys.exc_info()}')
-        finally:
-            if conn is not None:
-                conn.close()
-            
+            result = {'code': CODE_FAILED, 'msg': f'errors in app_controller: {traceback.format_exc()}'}    
+        end = time.time()
+        cost_time = str_utils.get_time_info(begin, end)
+
         info = self.producer.get_switch_data(index)
         self.producer.task_done()
-        info[Flag.data] = result + (host, )
+        target = dict()
+        for k in result:
+            target[k] = result[k]
+        info[Flag.data] = dict({'host': f'{host}:{port}', 'cost_time': cost_time}, **target)
         info[Flag.event].set()
         with self.lock:
             self.record[item] -= 1
 
-    def get_new_server_info(self, info):
-        server_map = dict()
-        for item in info:
-            k = self.get_server_key(item)
-            server_map[k] = 0
-
-        return server_map
-
+    # 更新服务节点信息
     def update_server(self, result):
         server_map = self.get_new_server_info(result)
         with self.lock:
@@ -193,6 +191,24 @@ class Consumer:
                 del self.record[k]
                 del self.time_record[k]
 
+    # 检查指定服务的是否可以连接
+    def check_server_avilable(self, addr):
+        try:
+            host, port = self.get_server_host_ip(addr)
+            rpyc.connect(host, port)
+            return True
+        except:
+            return False
+
+    # 获取新的服务信息
+    def get_new_server_info(self, info):
+        server_map = dict()
+        for item in info:
+            k = self.get_server_key(item)
+            if self.check_server_avilable(k):
+                server_map[k] = 0
+        return server_map
+
     def get_server_key(self, item):
         ip = item[0]
         port = item[1]
@@ -210,7 +226,7 @@ class CentralControlService(Service):
         super().__init__()
         trivial_util.print_t(f'{self.get_service_name().lower()} init success.')
 
-    def exposed_process(self, data) -> Tuple[int, str]:
+    def exposed_process(self, data) -> Dict:
         '''
         实现Android版本的编译
         :param data: 所有调用编译需要用到的参数
