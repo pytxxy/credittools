@@ -8,14 +8,13 @@ Created on 2016年10月21日
 因为每一个key有压缩数据限制(免费版key支持500个)，所以如果要大批量进行图片压缩，需要自己先搞定key的问题；
 
 功能验证列表：
-1.先验证整体拷贝和非整体拷贝功能是否正常；(E:\temp\cloud_res\mini_src_01)
-2.验证网上压缩功能是否正常；(E:\temp\cloud_res\mini_src_01)
-3.验证拷贝只打标签功能是否正常；(E:\temp\cloud_res\mini_src_02)
-4.验证本地更新功能是否正常；(E:\temp\cloud_res\mini_src_03)
-5.验证本地只打标签功能是否正常；(E:\temp\cloud_res\mini_src_04)
+1.先验证整体拷贝和非整体拷贝功能是否正常；(E:\\temp\\cloud_res\\mini_src_01)
+2.验证网上压缩功能是否正常；(E:\\temp\\cloud_res\\mini_src_01)
+3.验证拷贝只打标签功能是否正常；(E:\\temp\\cloud_res\\mini_src_02)
+4.验证本地更新功能是否正常；(E:\\temp\\cloud_res\\mini_src_03)
+5.验证本地只打标签功能是否正常；(E:\\temp\\cloud_res\\mini_src_04)
 
 '''
-
 import tinify
 import argparse
 import os
