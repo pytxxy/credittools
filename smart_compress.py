@@ -25,14 +25,9 @@ import shutil
 import piexif
 import traceback
 import sys
-import imghdr
 import tempfile
 import creditutils.png_util as png_util
-
-
-class ImageType:
-    png = 'png'
-    jpeg = 'jpeg'
+from creditutils.img_util import detect_image_type, ImageType
 
 
 class Compression:
@@ -193,10 +188,10 @@ class ProcessManager:
     # 给图片文件增加压缩标识
     @staticmethod
     def add_compressed_flag(src_path, compressed_identify):
-        img_type = imghdr.what(src_path)
-        if ImageType.jpeg == img_type:
+        img_type = detect_image_type(src_path)
+        if ImageType.JPEG == img_type:
             ProcessManager.add_compressed_flag_to_jpeg_file(src_path, compressed_identify)
-        elif ImageType.png == img_type:
+        elif ImageType.PNG == img_type:
             ProcessManager.add_compressed_flag_to_png_file(src_path, compressed_identify)
 
     # 检测png 文件是否包含压缩标识
@@ -236,14 +231,13 @@ class ProcessManager:
     # 检查文件是否含有压缩标识
     @staticmethod
     def check_if_compressed(file_path, compressed_identify, old_compressed_identify):
-        img_type = imghdr.what(file_path)
-        if ImageType.png == img_type:
+        img_type = detect_image_type(file_path)
+        if ImageType.PNG == img_type:
             return ProcessManager.check_if_png_compressed(file_path, compressed_identify, old_compressed_identify)
-        elif ImageType.jpeg == img_type:
+        elif ImageType.JPEG == img_type:
             return ProcessManager.check_if_jpeg_compressed(file_path, compressed_identify, old_compressed_identify)
 
         return False
-
 
 def main(args):
     manager = ProcessManager(args)
