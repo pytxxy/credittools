@@ -119,7 +119,7 @@ class AppClient:
         #     'isForTest':True,
         #     'toAlign':True,
         #     'toUpdateCode':True,
-        #     'toNotify':False,
+        #     'withBundleFormat':False,
         #     'minifyEnabled':False,
         #     'forGoogle':False,
         #     'toUploadSftp':True,
@@ -167,7 +167,7 @@ class AppClient:
                 data['toUpdateCode'] = self.to_update
                 data['toNotify'] = self.need_notify
                 data['minifyEnabled'] = self.minify_enabled
-                data['forGoogle'] = self.for_google
+                data['withBundleFormat'] = self.with_bundle_format
                 data['toUploadSftp'] = self.to_upload
                 data['toUploadBugly'] = self.to_upload_bugly
                 data['releaseDebuggable'] = self.release_debuggable
@@ -246,7 +246,7 @@ def get_args(src_args=None):
     parser.add_argument('--align', dest='to_align', action='store_true', default=True, help='indicate to align apk file after protected')
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
     parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
-    parser.add_argument('--google', dest='for_google', action='store_true', default=False, help='indicate to build for google play')
+    parser.add_argument('--bundle', dest='with_bundle_format', action='store_true', default=False, help='indicate to build for android app bundle format')
     parser.add_argument('--channel', metavar='channel', dest='channel', type=str, default=BuilderLabel.DEFAULT_CHAN, help='application channel')
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
