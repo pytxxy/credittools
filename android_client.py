@@ -125,7 +125,7 @@ TEST_DEBUG_CONFIG = {
     'job_build_name': '#712',
     'job_build_url': 'http://jenkins.txxy.com/job/android_app/712/',
     'app_codes': 'tchk',
-    'ver_envs': 'po',
+    'ver_envs': 'qa',
     'ver_names': '{"txxy":"7.0.1","xycx":"2.2.19","grbg":"1.1.0","zssfzs":"1.1.0","fxgj":"1.0.5","txys":"1.0.6","txxyzxxxcx":"1.1.0","tiance":"1.4.1","tianxun":"1.2.6","tchk":"1.0.0"}',
     'ver_codes': '{"txxy":1336,"xycx":355,"grbg":34,"zssfzs":26,"fxgj":21,"txys":26,"txxyzxxxcx":22,"tiance":163,"tianxun":100,"tchk":1}',
     'ver_nos': '{"txxy":3,"xycx":1,"grbg":1,"zssfzs":1,"fxgj":1,"txys":1,"txxyzxxxcx":1,"tiance":1,"tianxun":3,"tchk":1}',
@@ -318,7 +318,7 @@ class AppClient:
         data = {
             'product': 'tchk',
             'buildMode': 'release' if not TEST_DEBUG_CONFIG['is_debug'] else 'debug',
-            'env': 'po',
+            'env': 'qa',
             'appBaseVersion': '1.0.0',
             'appReleaseVersion': '01',
             'appVersionCode': '1',
