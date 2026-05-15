@@ -1,0 +1,10 @@
+[project]
+name = "credittools"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12.13"
+dependencies = [
+    "creditutils>=0.3.2",
+    "pip>=26.1.1",
+]
