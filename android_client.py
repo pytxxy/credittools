@@ -159,11 +159,99 @@ class AppClient:
             self.data[name] = value
 
         self.results = {}
-        
-    # 处理打包，以环境优先，打各应用包
+        self.results_lock = threading.Lock()
+
+    @staticmethod
+    def _split_csv_value(value, default=None):
+        items = []
+        if value is not None:
+            items = [item.strip() for item in value.split(',') if item.strip()]
+        if items:
+            return items
+        if default is not None:
+            return [default]
+        return []
+
+    @staticmethod
+    def _build_task_key(data):
+        return f'{data["product"]}|{data["env"]}|{data["channel"]}'
+
+    def _build_request_data(self, app_code, env, channel, build_mode, ver_names, ver_nos, ver_codes, api_vers):
+        data = {}
+        data['product'] = app_code
+        data['buildMode'] = build_mode
+        data['env'] = env
+
+        if app_code in ver_names.keys():
+            data['appBaseVersion'] = ver_names.get(app_code)
+
+        if app_code in ver_nos.keys():
+            ver_no = ver_nos.get(app_code)
+            data['appReleaseVersion'] = f'{ver_no:02d}'
+
+        if app_code in ver_codes.keys():
+            data['appVersionCode'] = str(ver_codes.get(app_code))
+
+        api_ver = ''
+        if api_vers is not None and app_code in api_vers.keys():
+            api_ver = api_vers.get(app_code)
+        data['apiVersion'] = api_ver
+        data['channel'] = channel
+        data['branch'] = self.branch
+        data['demoLabel'] = self.demo_label
+        data['splashType'] = str(self.splash_type)
+        data['isForTest'] = self.is_test
+        data['toAlign'] = self.to_align
+        data['toUpdateCode'] = self.to_update
+        data['toNotify'] = self.need_notify
+        data['minifyEnabled'] = self.minify_enabled
+        data['withBundleFormat'] = self.with_bundle_format
+        data['toUploadSftp'] = self.to_upload
+        data['toUploadBugly'] = self.to_upload_bugly
+        data['releaseDebuggable'] = self.release_debuggable
+        data['withApiEncrypt'] = self.with_api_encrypt
+
+        jobInfo = {}
+        jobInfo['jobName'] = self.job_name
+        jobInfo['jobUrl'] = self.job_url
+        jobInfo['jobBuildName'] = self.job_build_name
+        jobInfo['jobBuildUrl'] = self.job_build_url
+        data['jobInfo'] = json.dumps(jobInfo, ensure_ascii=False)
+        return data
+
+    def _summarize_results(self):
+        tag_code = 'code'
+        success_code_str = '0'
+        is_success = True
+
+        for task_key in self.results:
+            item = self.results[task_key]
+            data = item['request']
+            result = item['result']
+            task_name = f'{data["product"]}/{data["env"]}/{data["channel"]}'
+
+            if result is None:
+                is_success = False
+                print(f'call builder({task_name}) failed with empty result')
+                continue
+
+            if tag_code not in result:
+                is_success = False
+                print(f'call builder({task_name}) failed with {result}')
+                continue
+
+            if result[tag_code] == success_code_str:
+                print(f'call builder({task_name}) success with {result}')
+            else:
+                is_success = False
+                print(f'call builder({task_name}) failed with {result}')
+
+        return is_success
+
     def process(self):
-        app_codes = self.app_codes.split(',')
-        envs = self.ver_envs.split(',')
+        app_codes = self._split_csv_value(self.app_codes)
+        envs = self._split_csv_value(self.ver_envs)
+        channels = self._split_csv_value(self.channel, BuilderLabel.DEFAULT_CHAN)
         ver_nos = json.loads(self.ver_nos)
         ver_names = json.loads(self.ver_names)
         ver_codes = json.loads(self.ver_codes)
@@ -181,78 +269,19 @@ class AppClient:
         threads = []
         for env in envs:
             for app_code in app_codes:
-                print(f'正在打{app_code}的{env}环境的包...')
-                
-                data = {}
-                data['product'] = app_code
-                data['buildMode'] = buildMode
-                data['env'] = env
-                
-                if app_code in ver_names.keys():
-                    data['appBaseVersion'] = ver_names.get(app_code)
-                
-                if app_code in ver_nos.keys():
-                    ver_no = ver_nos.get(app_code)
-                    data['appReleaseVersion'] = f'{ver_no:02d}'
+                for channel in channels:
+                    print(f'正在打{app_code}的{env}环境{channel}渠道包...')
+                    data = self._build_request_data(app_code, env, channel, buildMode, ver_names, ver_nos, ver_codes, api_vers)
 
-                if app_code in ver_codes.keys():
-                    data['appVersionCode'] = str(ver_codes.get(app_code))
-                
-                api_ver = ''
-                if api_vers is not None and app_code in api_vers.keys():
-                    api_ver = api_vers.get(app_code)
-                data['apiVersion'] = api_ver
-                data['channel'] = self.channel
-                data['branch'] = self.branch
-                data['demoLabel'] = self.demo_label
-                data['splashType'] = str(self.splash_type)
-                data['isForTest'] = self.is_test
-                data['toAlign'] = self.to_align
-                data['toUpdateCode'] = self.to_update
-                data['toNotify'] = self.need_notify
-                data['minifyEnabled'] = self.minify_enabled
-                data['withBundleFormat'] = self.with_bundle_format
-                data['toUploadSftp'] = self.to_upload
-                data['toUploadBugly'] = self.to_upload_bugly
-                data['releaseDebuggable'] = self.release_debuggable
-                data['withApiEncrypt'] = self.with_api_encrypt
-
-                jobInfo = {}
-                jobInfo['jobName'] = self.job_name
-                jobInfo['jobUrl'] = self.job_url
-                jobInfo['jobBuildName'] = self.job_build_name
-                jobInfo['jobBuildUrl'] = self.job_build_url
-                data['jobInfo'] = json.dumps(jobInfo, ensure_ascii=False)
-
-                thread = threading.Thread(target=self.check_call_builder, args=(client,data))
-                threads.append(thread)
-                thread.start()
+                    thread = threading.Thread(target=self.check_call_builder, args=(client, data))
+                    threads.append(thread)
+                    thread.start()
 
         for thread in threads:
             thread.join()
 
-        tag_code = 'code'
-        success_code_str = '0'
-        is_success = True
-        for k in self.results:
-            result = self.results[k]
-            if result == None:
-                is_success = False
-                continue
+        return self._summarize_results()
 
-            if tag_code not in result:
-                is_success = False
-                print(f'call builder({k}) failed with {result}')
-                continue
-
-            if result[tag_code] == success_code_str:
-                print(f'call builder({k}) success with {result}')
-            else:
-                is_success = False
-                print(f'call builder({k}) failed with {result}')
-
-        return is_success
-            
     def check_call_builder(self, client, data):
         """
         调用构建服务器API并记录结果
@@ -265,8 +294,12 @@ class AppClient:
             构建服务器的响应结果
         """
         result = client.check_call_builder(data)
-        data_str = json.dumps(data, ensure_ascii=False)
-        self.results[data_str] = result
+        task_key = self._build_task_key(data)
+        with self.results_lock:
+            self.results[task_key] = {
+                'request': dict(data),
+                'result': result
+            }
 
         return result
 
@@ -376,7 +409,8 @@ def get_args(src_args=None):
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
     parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
     parser.add_argument('--bundle', dest='with_bundle_format', action='store_true', default=False, help='indicate to build for android app bundle format')
-    parser.add_argument('--channel', metavar='channel', dest='channel', type=str, default=BuilderLabel.DEFAULT_CHAN, help='application channel')
+    parser.add_argument('--channel', metavar='channel', dest='channel', type=str, default=BuilderLabel.DEFAULT_CHAN,
+                        help='application channel, supports comma-separated values such as pycredit,oppo,vivo')
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
