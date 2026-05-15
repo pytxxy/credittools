@@ -1,7 +1,10 @@
 import importlib
+import io
+import json
 import sys
 import types
 import unittest
+from contextlib import redirect_stdout
 from types import SimpleNamespace
 from unittest import mock
 
@@ -48,12 +51,13 @@ class InlineThread:
 
 
 class FakeBuilderClient:
-    def __init__(self):
+    def __init__(self, result=None):
         self.calls = []
+        self.result = result or {"code": "0"}
 
     def check_call_builder(self, data):
         self.calls.append(dict(data))
-        return {"code": "0"}
+        return self.result
 
 
 class AndroidClientProcessTests(unittest.TestCase):
@@ -120,6 +124,25 @@ class AndroidClientProcessTests(unittest.TestCase):
         }
         actual_tasks = {(call["env"], call["product"], call["channel"]) for call in fake_client.calls}
         self.assertEqual(expected_tasks, actual_tasks)
+
+    def test_result_log_identifies_task_with_full_request_data(self):
+        fake_client = FakeBuilderClient({"code": "1", "msg": "failed"})
+        args = self._build_args()
+        args.app_codes = "tchk"
+        args.ver_envs = "qa"
+        args.channel = "chan_a"
+        output = io.StringIO()
+
+        with mock.patch.object(self.android_client.Client, "new_client", return_value=fake_client):
+            with mock.patch.object(self.android_client.threading, "Thread", InlineThread):
+                with redirect_stdout(output):
+                    app_client = self.android_client.AppClient(args)
+                    is_success = app_client.process()
+
+        self.assertFalse(is_success)
+        request_data = fake_client.calls[0]
+        expected_task_name = json.dumps(request_data, ensure_ascii=False, sort_keys=True)
+        self.assertIn(f"call builder({expected_task_name}) failed", output.getvalue())
 
 
 if __name__ == "__main__":

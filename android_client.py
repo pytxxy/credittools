@@ -176,6 +176,10 @@ class AppClient:
     def _build_task_key(data):
         return f'{data["product"]}|{data["env"]}|{data["channel"]}'
 
+    @staticmethod
+    def _format_task_name(data):
+        return json.dumps(data, ensure_ascii=False, sort_keys=True)
+
     def _build_request_data(self, app_code, env, channel, build_mode, ver_names, ver_nos, ver_codes, api_vers):
         data = {}
         data['product'] = app_code
@@ -228,7 +232,7 @@ class AppClient:
             item = self.results[task_key]
             data = item['request']
             result = item['result']
-            task_name = f'{data["product"]}/{data["env"]}/{data["channel"]}'
+            task_name = self._format_task_name(data)
 
             if result is None:
                 is_success = False
