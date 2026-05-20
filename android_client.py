@@ -420,7 +420,7 @@ def get_args(src_args=None):
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
     parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
     parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
-    parser.add_argument('--upload_bugly', dest='to_upload_bugly', action='store_true', default=True, help='upload bugly symbol files, mapping.txt etc.')
+    parser.add_argument('--upload_bugly', dest='to_upload_bugly', action='store_true', default=False, help='upload bugly symbol files, mapping.txt etc.')
     parser.add_argument('--release_debuggable', dest='release_debuggable', action='store_true', default=False, help='release version can be debuggable or not')
     parser.add_argument('--api_encrypt', dest='with_api_encrypt', action='store_true', default=False, help='api need encrypted or not')
 
