@@ -138,6 +138,7 @@ TEST_DEBUG_CONFIG = {
     'channel': 'tc_hk_gw',
     'demo_label': 'normal',
     'branch': 'develop',
+    'tag': '',
     'minify_enabled': True,
     'need_notify': True,
     'to_upload_bugly': True,
@@ -202,6 +203,7 @@ class AppClient:
         data['apiVersion'] = api_ver
         data['channel'] = channel
         data['branch'] = self.branch
+        data['tag'] = self.tag
         data['demoLabel'] = self.demo_label
         data['splashType'] = str(self.splash_type)
         data['isForTest'] = self.is_test
@@ -336,6 +338,7 @@ class AppClient:
             'apiVersion': '',
             'channel': TEST_DEBUG_CONFIG['channel'],
             'branch': TEST_DEBUG_CONFIG['branch'],
+            'tag': TEST_DEBUG_CONFIG['tag'],
             'demoLabel': TEST_DEBUG_CONFIG['demo_label'],
             'splashType': str(TEST_DEBUG_CONFIG['splash_type']),
             'isForTest': TEST_DEBUG_CONFIG['is_test'],
@@ -418,6 +421,7 @@ def get_args(src_args=None):
     parser.add_argument('--demo', metavar='demo_label', dest='demo_label', type=str, default='normal', choices=['normal', 'bridge', 'hotloan', 'mall'],
                         help='normal: normal entry; bridge: bridge entry; hotloan: hot loan entry;')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
+    parser.add_argument('--tag', metavar='tag', dest='tag', default='', help='code tag name')
     parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
     parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
     parser.add_argument('--upload_bugly', dest='to_upload_bugly', action='store_true', default=False, help='upload bugly symbol files, mapping.txt etc.')
