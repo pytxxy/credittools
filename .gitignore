@@ -104,3 +104,9 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Claude Code
+.claude/
+
+# CodeGraph
+.codegraph/
