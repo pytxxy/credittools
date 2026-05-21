@@ -110,6 +110,7 @@ class AppClient:
         #     'apiVersion':'1.1',
         #     'target':'assembleHap',
         #     'branch':'develop',
+        #     'tag':'',
         #     'toUpdateCode':True,
         #     'toNotify':False,
         #     'toUploadBugly':False,
@@ -155,6 +156,7 @@ class AppClient:
                 data['apiVersion'] = api_ver
                 data['signing'] = self.signing
                 data['branch'] = self.branch
+                data['tag'] = self.tag
                 data['toUpdateCode'] = self.to_update
                 data['toNotify'] = self.need_notify
                 data['toUploadBugly'] = self.to_upload_bugly
@@ -234,6 +236,7 @@ def get_args(src_args=None):
     parser.add_argument('--upload', dest='to_upload', action='store_true', default=False, help='indicate to upload build files')
     parser.add_argument('--splash_type', dest='splash_type', type=int, default=0, help='indicate to build with splash type')
     parser.add_argument('--branch', metavar='branch', dest='branch', default='master', help='code branch name')
+    parser.add_argument('--tag', metavar='tag', dest='tag', default='', help='code tag name')
     parser.add_argument('--minify', dest='minify_enabled', action='store_true', default=False, help='whether to enable code obfuscation or not')
     parser.add_argument('--distribute', dest='to_distribute', action='store_true', default=False, help='generate app to distribute')
     parser.add_argument('--notify', dest='need_notify', action='store_true', default=False, help='send DingTalk notifiactions')
